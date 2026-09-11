@@ -12,13 +12,22 @@ import shutil
 ROOT = Path(__file__).resolve().parents[2]
 STAGING = ROOT / ".github" / "source-import"
 EXPECTED_PARTS = {
-    1: ("bc3eb26a8c3caf3389b361285ba29efff0c55c7250f997cc78b39d3cdea22dc9", 50782),
-    2: ("5450136d24a8579b84a309d7e87a3f6ce9e274b819f70d784b9b48324b17eba5", 50782),
-    3: ("e3177b0a1183a64312b38d752dab8833fed5fdc83db0fd3541439d44e8ade118", 50780),
+    1: ("a21bbf50457b625f463c32b2dd994dc0e91794a9c454a4d847f02db00346ff17", 12696),
+    2: ("ac8f5cd362b00ce6dbf480c6aaa22291d842b689c286f9b1f1900fccdd62ea89", 12696),
+    3: ("b404bbb6d8392af5650b7369bf5ccb049843d8140c8511c00a644ccda819be07", 12696),
+    4: ("57069d355384e9994fec3a518b5da051a9752b34fae78cf82a06a125606350da", 12696),
+    5: ("5cb61fdd183e8bcb28470ccc33e9d1b89f1e4eb9e411218324250ff93596cb30", 12696),
+    6: ("68efcf6dc8d7c9067919cdddc69c3a064d2ea2072e7c6bab7b0e49871fb56927", 12696),
+    7: ("87a96c85fd6236a0545a5268f6832c42c1d255fb92f640c592b0720079c3a0ba", 12696),
+    8: ("675548f05d4212bcc6738e3acd3bee4de3a762126b230baca3a6112d0c38ef24", 12696),
+    9: ("f715beeaedd46a7f1a98bab747424ce914713c122c34ffd87c491b3e59f8c902", 12696),
+    10: ("53a3c48edf5b6267d90e6eea2681c9e8dccc5309ce92063741acc5027df01caf", 12696),
+    11: ("85bacda01d1a40ba825f27c18d88cc2258546ff49c723905eed2d07e3b4d493a", 12696),
+    12: ("9130e9f0dd21d061841e1a8f6858cd4f8fcd8969de47db40dfff9c7cb1e782a4", 12688),
 }
-EXPECTED_COMPRESSED_SHA = "4b5bab2f95840ea560487e554a726e9b5161c2329aa0ef8bfc0b3e41631ac8b0"
+EXPECTED_COMPRESSED_SHA = "61a5531fa5efafca6d8520ae97be9b247a554965b601f5f9f4e671ce0b2c6f96"
 EXPECTED_RAW_SHA = "a36a10b567b93d48c430eab2ffcedf09f456c65819c6dd0c014f18e7693ab207"
-MARKER = re.compile(r"^<!-- HVES_SOURCE_PAYLOAD (\d)/3 sha256=([0-9a-f]{64}) -->\n([A-Za-z0-9+/=]+)$")
+MARKER = re.compile(r"^<!-- HVES_SOURCE_PAYLOAD (\d{1,2})/12 sha256=([0-9a-f]{64}) -->\n([A-Za-z0-9+/=]+)$")
 
 repo = os.environ["GITHUB_REPOSITORY"]
 token = os.environ["GITHUB_TOKEN"]
@@ -54,8 +63,7 @@ for comment in comments:
 
 if set(parts) != set(EXPECTED_PARTS):
     raise SystemExit(f"Expected payload comments {sorted(EXPECTED_PARTS)}, found {sorted(parts)}")
-encoded = "".join(parts[index] for index in sorted(parts))
-compressed = base64.b64decode(encoded, validate=True)
+compressed = base64.b64decode("".join(parts[index] for index in sorted(parts)), validate=True)
 if hashlib.sha256(compressed).hexdigest() != EXPECTED_COMPRESSED_SHA:
     raise SystemExit("Compressed payload checksum mismatch")
 raw = lzma.decompress(compressed, format=lzma.FORMAT_XZ, memlimit=128 * 1024 * 1024)
@@ -64,7 +72,7 @@ if len(raw) > 2 * 1024 * 1024 or hashlib.sha256(raw).hexdigest() != EXPECTED_RAW
 files = json.loads(raw.decode("utf-8"))
 if not isinstance(files, dict) or len(files) != 87:
     raise SystemExit("Unexpected reviewed source inventory")
-required = {"app.py", "renderer.py", "cli.py", "README.md", "version.py", "requirements.txt"}
+required = {"app.py", "renderer.py", "cli.py", "README.md", "version.py", "requirements.txt", "requirements-dev.txt"}
 if not required.issubset(files):
     raise SystemExit("Reviewed source is missing required application files")
 
