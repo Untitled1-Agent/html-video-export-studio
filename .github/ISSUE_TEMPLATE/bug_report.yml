@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a reproducible export, UI, or installation problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Please use a minimal source you may share. Remove credentials, private URLs, customer files and local usernames from logs. Security issues: see SECURITY.md; do not post secrets here."
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: 1.5.2
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, browser, FFmpeg build, and installation method.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include recipe, capture target, timeline adapter, duration source, scale, FPS, codec and processing preset.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized error/log and minimal source
+      description: Attach only material you are authorized to share. A screenshot alone may not reproduce a timeline issue.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks performed
+      options:
+        - label: I read docs/TROUBLESHOOTING.md and docs/KNOWN_ISSUES.md.
+        - label: I compared Exact Source Master / No processing against the affected preset.

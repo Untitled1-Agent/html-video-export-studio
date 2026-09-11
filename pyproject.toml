@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "html-video-export-studio"
+version = "1.5.2"
+description = "Desktop and CLI suite for source-controlled HTML-to-video export"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["playwright>=1.45,<2", "imageio-ffmpeg>=0.5,<1", "Pillow>=10,<13"]
+
+[project.scripts]
+html-video-export = "cli:main"
+html-video-export-studio = "app:main"
+
+[tool.setuptools]
+py-modules = ["app", "cli", "media_pipeline", "models", "presets", "processing", "project_io", "renderer", "settings_store", "update_helper", "updater", "version"]

@@ -1,0 +1,38 @@
+Browser: /usr/bin/chromium
+Loaded using embedded.
+{
+  "source": {
+    "value": "<private-source.html>",
+    "kind": "file",
+    "load_strategy": "embedded"
+  },
+  "load_strategy": "embedded",
+  "target_description": "Auto: [data-om-exportable-video-with-duration-secs]",
+  "target_kind": "svg",
+  "target_selector": "[data-om-exportable-video-with-duration-secs]",
+  "target_frame_url": "about:blank",
+  "timeline_mode": "om_event",
+  "duration_seconds": 14.4,
+  "duration_source": "capture root data-om-exportable-video-with-duration-secs",
+  "source_width": 1080,
+  "source_height": 1920,
+  "output_width": 2160,
+  "output_height": 3840,
+  "geometry_mode": "lock_intrinsic",
+  "sync_seek": true,
+  "recommended_processing_key": "no_processing",
+  "content_classification": "not sampled",
+  "diagnostics": [],
+  "extra": {}
+}
+Loaded using embedded.
+Frame 0%: 2160x3840 PASS
+Loaded using embedded.
+Frame 20%: 2160x3840 PASS
+Loaded using embedded.
+Frame 50%: 2160x3840 PASS
+Loaded using embedded.
+Frame 80%: 2160x3840 PASS
+Loaded using embedded.
+Frame 95%: 2160x3840 PASS
+REAL SOURCE PASSED

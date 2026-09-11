@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+html,body{margin:0;background:#201e1d;overflow:hidden}
+#stage{width:640px;height:360px;display:grid;place-items:center;background:#201e1d;color:white;font:800 42px system-ui}
+</style>
+<div id="stage" data-video-export>Static page hold</div>
+<script>
+// Deliberate ambient activity: Static timeline mode must capture once and reuse the frame.
+setInterval(() => document.querySelector('#stage').dataset.tick = String(Date.now()), 10);
+</script>

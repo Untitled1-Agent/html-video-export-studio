@@ -1,0 +1,12 @@
+include .gitattributes .gitignore CHANGELOG.md CONTRIBUTING.md GITHUB_SETUP.md NOTICE.md README.md RELEASE_NOTES_1.5.1.md RELEASE_NOTES_1.5.2.md SECURITY.md TEST_REPORT.md install_macos_linux.sh install_windows.bat requirements-dev.txt requirements.txt run_macos_linux.sh run_windows.bat
+recursive-include docs *.md
+recursive-include examples *.html *.json
+recursive-include tests *.py *.html *.json
+recursive-include tools *.py
+recursive-include .github *.yml *.yaml *.md
+recursive-include validation *.txt *.json
+global-exclude *.pyc *.pyo .DS_Store
+prune .venv
+prune .git
+prune user_inputs
+prune exports

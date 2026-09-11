@@ -1,0 +1,19 @@
+{
+  "review_date": "2026-09-11",
+  "platform": "Linux",
+  "python": "3.13.5",
+  "packages": {
+    "playwright": "1.57.0",
+    "Pillow": "12.3.0",
+    "imageio-ffmpeg": "0.6.0",
+    "setuptools": "82.0.1",
+    "PyYAML": "6.0.3"
+  },
+  "native_windows_tested": false,
+  "native_macos_tested": false,
+  "live_github_writes": false,
+  "chromium": "Chromium 144.0.7559.96 built on Debian GNU/Linux 13 (trixie)",
+  "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "git": "git version 2.47.3",
+  "upstream_source_sha256": "cf96908445c2b9dab90060da9ef09779bd16e19afc21330c7d8f4456cc7e9956"
+}

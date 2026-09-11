@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+html,body{margin:0;background:#201e1d;overflow:hidden}
+#stage{width:640px;height:360px;position:relative;background:#201e1d;color:white;font:700 30px system-ui}
+#dot{position:absolute;width:64px;height:64px;border-radius:50%;background:#ec3013;top:150px;left:20px}
+</style>
+<div id="stage" data-video-export data-export-duration="3">
+  <div style="padding:24px">Virtual browser clock</div><div id="dot"></div>
+</div>
+<script>
+const started = Date.now();
+const dot = document.querySelector('#dot');
+function tick(){
+  const t=(Date.now()-started)/1000;
+  dot.style.left=(20+Math.min(1,t/3)*520)+'px';
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>

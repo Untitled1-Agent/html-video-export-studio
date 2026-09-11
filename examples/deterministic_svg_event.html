@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>html,body{margin:0;background:#111;overflow:hidden}</style>
+<svg id="stage" width="640" height="360" viewBox="0 0 640 360"
+     data-video-export data-export-duration="3"
+     xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="360" fill="#201e1d"/>
+  <circle id="dot" cx="50" cy="180" r="35" fill="#ec3013"/>
+  <text x="24" y="48" fill="white" font-family="system-ui" font-size="28">
+    Custom-event deterministic export
+  </text>
+</svg>
+<script>
+const stage = document.querySelector('#stage');
+const dot = document.querySelector('#dot');
+stage.addEventListener('video-export-seek', event => {
+  const t = Math.max(0, Number(event.detail.time || 0));
+  dot.setAttribute('cx', String(50 + 540 * Math.min(1, t / 3)));
+});
+</script>

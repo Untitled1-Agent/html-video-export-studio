@@ -1,0 +1,11 @@
+Configuration reference matches code.
+Local documentation links and package version pass.
+YAML / pinned actions PASS: .github/dependabot.yml
+YAML / pinned actions PASS: .github/ISSUE_TEMPLATE/config.yml
+YAML / pinned actions PASS: .github/ISSUE_TEMPLATE/feature_request.yml
+YAML / pinned actions PASS: .github/ISSUE_TEMPLATE/bug_report.yml
+YAML / pinned actions PASS: .github/workflows/tests.yml
+YAML / pinned actions PASS: .github/workflows/release.yml
+Shell syntax PASS: install_macos_linux.sh
+Shell syntax PASS: run_macos_linux.sh
+Publisher dry-run PASS: Untitled1-Agent/html-video-export-studio private 76 files

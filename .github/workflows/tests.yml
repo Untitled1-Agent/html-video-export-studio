@@ -1,0 +1,60 @@
+name: Tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Desktop and codec dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb ffmpeg
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Documentation and metadata consistency
+        run: python tools/check_docs.py
+      - name: Full regression gate (no required skips)
+        run: xvfb-run -a python -W error::ResourceWarning tools/validate.py
+      - name: Browser / codec / filter matrix
+        run: python tests/profile_matrix.py
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Build and validate release archives
+        run: python tools/package_release.py dist
+  portable-core:
+    name: Portable core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Portable core only (not native UI certification)
+        run: python -m unittest discover -s tests -p test_core.py -v
+      - run: python tools/check_docs.py
+      - run: python -m build

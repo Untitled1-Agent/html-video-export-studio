@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+html,body{margin:0;background:#201e1d;overflow:hidden}
+#stage{width:640px;height:360px;position:relative;overflow:hidden;background:#201e1d}
+.card{position:absolute;width:130px;height:180px;left:40px;top:90px;background:#ec3013;
+      animation:slide 3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes slide{to{transform:translateX(420px) rotate(12deg)}}
+h1{margin:0;padding:24px;color:white;font:700 30px system-ui}
+</style>
+<div id="stage" data-video-export data-export-duration="3">
+  <h1>Web Animations / CSS timeline</h1><div class="card"></div>
+</div>

@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an improvement with a concrete workflow.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What are you trying to export or improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include fidelity/timing tradeoffs and the expected UI or API.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria / test case
+      description: A shareable minimal example is especially useful.

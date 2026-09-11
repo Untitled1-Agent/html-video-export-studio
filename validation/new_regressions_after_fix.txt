@@ -1,0 +1,19 @@
+test_explicit_duration_allows_infinite_animation (test_repository_review.RepositoryBrowserTests.test_explicit_duration_allows_infinite_animation) ... ok
+test_infinite_and_finite_animations_do_not_guess_duration (test_repository_review.RepositoryBrowserTests.test_infinite_and_finite_animations_do_not_guess_duration) ... ok
+test_output_must_not_overwrite_external_audio (test_repository_review.RepositoryBrowserTests.test_output_must_not_overwrite_external_audio) ... ok
+test_preview_filter_failure_preserves_existing_file (test_repository_review.RepositoryBrowserTests.test_preview_filter_failure_preserves_existing_file) ... ok
+test_preview_must_not_overwrite_html (test_repository_review.RepositoryBrowserTests.test_preview_must_not_overwrite_html) ... ok
+test_trim_bound_allows_infinite_animation (test_repository_review.RepositoryBrowserTests.test_trim_bound_allows_infinite_animation) ... ok
+test_application_requires_cli (test_repository_review.RepositoryCoreTests.test_application_requires_cli) ... ok
+test_application_validation_ignores_local_venv (test_repository_review.RepositoryCoreTests.test_application_validation_ignores_local_venv) ... ok
+test_audio_preflight_checks_actual_audio_filters (test_repository_review.RepositoryCoreTests.test_audio_preflight_checks_actual_audio_filters) ... ok
+test_probe_startup_failure_is_json_for_batch (test_repository_review.RepositoryCoreTests.test_probe_startup_failure_is_json_for_batch) ... ok
+test_probe_startup_failure_is_json_for_single_source (test_repository_review.RepositoryCoreTests.test_probe_startup_failure_is_json_for_single_source) ... ok
+test_scene_sum_overflow_rejected (test_repository_review.RepositoryCoreTests.test_scene_sum_overflow_rejected) ... ok
+test_windows_reserved_output_name_rejected (test_repository_review.RepositoryCoreTests.test_windows_reserved_output_name_rejected) ... ok
+test_yuv_preflight_checks_actual_color_filters (test_repository_review.RepositoryCoreTests.test_yuv_preflight_checks_actual_color_filters) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 2.199s
+
+OK

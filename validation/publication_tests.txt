@@ -1,0 +1,19 @@
+test_api_failure_is_not_treated_as_available_repo (test_repository_tools.RepositoryToolTests.test_api_failure_is_not_treated_as_available_repo) ... ok
+test_authentication_failure_stops_before_git_changes (test_repository_tools.RepositoryToolTests.test_authentication_failure_stops_before_git_changes) ... ok
+test_existing_remote_is_never_replaced (test_repository_tools.RepositoryToolTests.test_existing_remote_is_never_replaced) ... ok
+test_existing_repository_is_never_pushed_or_replaced (test_repository_tools.RepositoryToolTests.test_existing_repository_is_never_pushed_or_replaced) ... ok
+test_packaging_allowlist_excludes_private_root_inputs_and_secrets (test_repository_tools.RepositoryToolTests.test_packaging_allowlist_excludes_private_root_inputs_and_secrets) ... ok
+test_packaging_skips_symlinks (test_repository_tools.RepositoryToolTests.test_packaging_skips_symlinks) ... ok
+test_publish_default_private_and_public_is_explicit (test_repository_tools.RepositoryToolTests.test_publish_default_private_and_public_is_explicit) ... ok
+test_publish_dry_run_has_no_git_or_network_calls (test_repository_tools.RepositoryToolTests.test_publish_dry_run_has_no_git_or_network_calls) ... ok
+test_publish_makes_real_local_commit_with_mocked_github (test_repository_tools.RepositoryToolTests.test_publish_makes_real_local_commit_with_mocked_github) ... ok
+test_publish_repo_name_validation (test_repository_tools.RepositoryToolTests.test_publish_repo_name_validation) ... ok
+test_publisher_pins_github_host_without_shell (test_repository_tools.RepositoryToolTests.test_publisher_pins_github_host_without_shell) ... ok
+test_release_zips_reproducible_checksums_and_update_excludes_ci (test_repository_tools.RepositoryToolTests.test_release_zips_reproducible_checksums_and_update_excludes_ci) ... ok
+test_unexpected_staged_files_block_publication (test_repository_tools.RepositoryToolTests.test_unexpected_staged_files_block_publication) ... ok
+test_updater_rejects_wrong_restart_before_wait_or_apply (test_repository_tools.RepositoryToolTests.test_updater_rejects_wrong_restart_before_wait_or_apply) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.198s
+
+OK
