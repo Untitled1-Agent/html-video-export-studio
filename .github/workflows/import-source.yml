@@ -1,0 +1,33 @@
+name: Verified source import
+on:
+  push:
+    branches: ['feat/full-app-v1.5.2']
+    paths: ['.github/source-import/manifest.json']
+permissions:
+  contents: write
+concurrency:
+  group: initial-source-import-v1-5-2
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify and unpack reviewed source
+        run: python3 .github/source-import/apply.py
+      - name: Publish expanded source to feature branch
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin feat/full-app-v1.5.2
+          test "$(git rev-parse FETCH_HEAD)" = "$EXPECTED_SHA"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Publish reviewed HTML Video Export Studio v1.5.2 source'
+          git push origin HEAD:feat/full-app-v1.5.2

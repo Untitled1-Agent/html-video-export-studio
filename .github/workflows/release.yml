@@ -1,0 +1,42 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  package-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.13'
+      - name: Tag must match application version
+        run: python -c "import os,version; assert os.environ['GITHUB_REF_NAME'] == 'v'+version.APP_VERSION"
+      - run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb ffmpeg
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: python tools/check_docs.py
+      - run: xvfb-run -a python -W error::ResourceWarning tools/validate.py
+      - run: python tests/profile_matrix.py
+      - run: python -m build
+      - run: python tools/package_release.py dist
+      - name: Create draft (maintainer reviews before publishing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          notes="RELEASE_NOTES_${GITHUB_REF_NAME#v}.md"
+          test -f "$notes"
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 \
+            --verify-tag --draft --title "HTML Video Export Studio $GITHUB_REF_NAME" \
+            --notes-file "$notes"
