@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import queue
+import time
 import re
 import shutil
 import subprocess
@@ -88,6 +90,8 @@ def snapshot_for_export(job: JobConfig, concurrent_jobs: int = 1) -> JobConfig:
 
     snapshot = copy.deepcopy(job)
     snapshot.render.cpu_threads = resolve_cpu_threads(job.render.cpu_threads, concurrent_jobs)
+    # Runtime-only scheduling context: never persisted or copied back into the job.
+    snapshot.render._concurrent_exports = concurrent_jobs
     return snapshot
 
 
@@ -197,3 +201,160 @@ def commit_output(temporary: Path, destination: Path, *, overwrite: bool) -> Pat
         temporary.unlink(missing_ok=True)
         return candidate
     raise OSError('Too many filename collisions in the output directory.')
+
+
+@dataclass(frozen=True)
+class CapturePlan:
+    workers: int
+    max_frame_bytes: int
+    reason: str
+
+
+def capture_plan(job: JobConfig, timeline_mode, width: int, height: int,
+                 total_frames: int, declared_safe: bool) -> CapturePlan:
+    """Bound independent browser lanes by CPU share and PNG buffer memory.
+
+    A seek hook alone is not proof that a page is stateless. Auto requires an
+    explicit author contract; a user-selected count >1 is an explicit opt-in.
+    Browser heaps, native surfaces and FFmpeg buffers are additional memory.
+    """
+    from models import MAX_CAPTURE_WORKERS, TimelineMode, strict_int
+    requested = strict_int(job.render.capture_workers)
+    if not 0 <= requested <= MAX_CAPTURE_WORKERS:
+        raise ValueError('Invalid capture worker count.')
+    budget = strict_int(job.render.frame_buffer_mb)
+    if not 16 <= budget <= 4096:
+        raise ValueError('Invalid frame buffer budget.')
+    # PNG is lossless but incompressible frames can exceed raw RGB byte size.
+    frame_bytes = max(1, width * height * 5 + 65536)
+    seekable = timeline_mode in {
+        TimelineMode.OM_EVENT, TimelineMode.CUSTOM_EVENT,
+        TimelineMode.JAVASCRIPT_FUNCTION, TimelineMode.WEB_ANIMATIONS,
+        TimelineMode.MEDIA,
+    }
+    if not seekable:
+        if requested > 1 and timeline_mode != TimelineMode.STATIC:
+            raise ValueError('Parallel capture requires independently seekable frames; '
+                             'Browser Clock and Realtime must use 0 or 1 capture workers.')
+        return CapturePlan(1, frame_bytes, 'progressive/static timeline')
+    if requested == 1 or (requested == 0 and not declared_safe):
+        return CapturePlan(1, frame_bytes, 'sequential; parallel-safe source not declared' if requested == 0 else 'explicit sequential capture')
+    jobs = max(1, int(getattr(job.render, '_concurrent_exports', 1)))
+    cpu_share = max(1, (available_cpu_count() - 1) // jobs)
+    desired = requested or min(8, max(1, cpu_share // 3))
+    # Each lane retains at most a cached frame + one result, plus a consumer frame.
+    memory_limit = max(1, (budget * 1024 * 1024 // frame_bytes - 1) // 2)
+    # Avoid launching many browsers for a tiny automatic export. Explicit
+    # counts remain useful for expensive per-frame sources and diagnostics.
+    frame_limit = total_frames if requested else max(1, total_frames // 24)
+    workers = max(1, min(desired, memory_limit, frame_limit))
+    return CapturePlan(workers, frame_bytes,
+                       'explicit parallel-safe opt-in' if requested else 'author-declared parallel-safe source')
+
+
+class CapturePoolError(RuntimeError):
+    pass
+
+
+class OrderedCapturePool:
+    """One thread-owned capture session per lane, one outstanding result each.
+
+    factory(lane, stop) returns a context manager yielding capture(index).
+    Sessions are constructed, used and closed on their owner thread. Only bytes
+    and numeric timings cross threads. Consumer order is independent of finish
+    order. A failed lane wakes the consumer even when another lane is stalled.
+    """
+    def __init__(self, factory, workers: int, total: int, max_frame_bytes: int,
+                 check_cancel, run_event=None):
+        self.factory, self.workers, self.total = factory, workers, total
+        self.max_frame_bytes = max_frame_bytes
+        self.check_cancel, self.run_event = check_cancel, run_event
+        self.stop = threading.Event()
+        self.results = [queue.Queue(maxsize=1) for _ in range(workers)]
+        self.slots = [threading.Semaphore(1) for _ in range(workers)]
+        self.errors = queue.Queue()
+        self.threads = []
+        self.seek_seconds = 0.0
+        self.capture_seconds = 0.0
+
+    def _running(self):
+        while not self.stop.is_set():
+            if self.run_event is None or self.run_event.wait(0.05):
+                return not self.stop.is_set()
+        return False
+
+    def _worker(self, lane):
+        try:
+            with self.factory(lane, self.stop) as capture:
+                for index in range(lane, self.total, self.workers):
+                    while not self.stop.is_set():
+                        if self.slots[lane].acquire(timeout=0.05):
+                            break
+                    if not self._running():
+                        return
+                    data, seek, screenshot = capture(index)
+                    if len(data) > self.max_frame_bytes:
+                        raise CapturePoolError('Captured PNG exceeded the planned frame buffer size.')
+                    if self.stop.is_set():
+                        return
+                    self.results[lane].put_nowait((index, data, seek, screenshot))
+        except BaseException as exc:
+            # Do not transport tracebacks retaining thread-affine browser objects.
+            self.errors.put(f'Capture worker {lane + 1}: {type(exc).__name__}: {exc}')
+            self.stop.set()
+
+    def __enter__(self):
+        try:
+            for lane in range(self.workers):
+                thread = threading.Thread(target=self._worker, args=(lane,),
+                                          name=f'hves-capture-{lane + 1}')
+                thread.start()
+                self.threads.append(thread)
+        except BaseException:
+            self.close()
+            raise
+        return self
+
+    def frame(self, index):
+        lane = index % self.workers
+        while True:
+            self.check_cancel()
+            if not self.errors.empty():
+                raise CapturePoolError(self.errors.get_nowait())
+            if self.stop.is_set():
+                raise CapturePoolError('Capture pool stopped before all frames were delivered.')
+            try:
+                actual, data, seek, screenshot = self.results[lane].get(timeout=0.05)
+                self.slots[lane].release()
+                if actual != index:
+                    raise CapturePoolError(f'Out-of-order capture: expected {index}, got {actual}.')
+                self.seek_seconds += seek
+                self.capture_seconds += screenshot
+                return data
+            except queue.Empty:
+                if not self.threads[lane].is_alive() and self.results[lane].empty():
+                    # A peer can fail during get()'s timeout and stop this lane.
+                    # Preserve the actual failure instead of hiding it as EOF.
+                    self.check_cancel()
+                    if not self.errors.empty():
+                        raise CapturePoolError(self.errors.get_nowait())
+                    raise CapturePoolError(f'Capture worker {lane + 1} exited before frame {index}.')
+
+    def close(self):
+        self.stop.set()
+        # Browser operations carry bounded timeouts. Never publish/return while
+        # capture threads still own live resources; cleanup occurs on each owner.
+        for thread in self.threads:
+            thread.join()
+        for result in self.results:
+            while not result.empty():
+                result.get_nowait()
+        if not self.errors.empty():
+            raise CapturePoolError(self.errors.get_nowait())
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            self.close()
+        except CapturePoolError:
+            if exc_type is None:
+                raise

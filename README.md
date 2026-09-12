@@ -148,3 +148,13 @@ The release gate rejects required-test skips and records unhandled thread/finali
 Only render HTML/URLs you trust. Pages execute JavaScript and can access the network; this is not an isolation environment for hostile HTML. The publishing helper is not a secret scanner: keep personal inputs outside repository source folders and review staged changes. Never put tokens in projects or reports.
 
 **A project license has not been selected.** This package does not silently assign an open-source license on the owner's behalf. Review [NOTICE.md](NOTICE.md) before public distribution, and [SECURITY.md](SECURITY.md) for handling sensitive reports.
+
+## Faster single-video capture
+
+Job Settings → **Performance** adds independent browser capture workers. For
+a deterministic animation whose seek hook fully reconstructs each timestamp,
+start with **4 capture workers**, keep CPU threads automatic, and compare a
+short export with sequential mode. This is separate from queue workers, which
+run different movies. The guarded viewport screenshot fast path is on by
+default, including for sequential capture. See [parallel capture](docs/PARALLEL_CAPTURE.md)
+for the safety contract, memory budget, timings and end-to-end benchmark.

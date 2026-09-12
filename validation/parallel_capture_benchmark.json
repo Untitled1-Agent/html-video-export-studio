@@ -1,0 +1,145 @@
+{
+  "width": 1280,
+  "height": 720,
+  "frames": 90,
+  "encoder_threads": 4,
+  "trials": 2,
+  "summary": {
+    "legacy_serial": {
+      "median_seconds": 15.786386203000006,
+      "median_fps": 5.813021595847218
+    },
+    "fast_serial": {
+      "median_seconds": 10.499308982000002,
+      "median_fps": 8.576717079618074
+    },
+    "parallel_4": {
+      "median_seconds": 7.214044990500042,
+      "median_fps": 12.583897916818822
+    }
+  },
+  "runs": [
+    {
+      "variant": "legacy_serial",
+      "trial": 0,
+      "seconds": 13.596054001000084,
+      "fps": 6.619567706437461,
+      "decoded_frames": 90,
+      "stages": {
+        "seek_seconds": 2.674364720999165,
+        "screenshot_seconds": 7.995771583000533,
+        "frame_wait_seconds": 0.0,
+        "pipe_write_seconds": 0.0024165879999600293,
+        "finalize_seconds": 1.9946580840000934,
+        "capture_workers": 1,
+        "fast_capture": false,
+        "total_seconds": 13.102596415000107,
+        "frames": 90,
+        "end_to_end_fps": 6.868867600696778
+      }
+    },
+    {
+      "variant": "fast_serial",
+      "trial": 0,
+      "seconds": 10.745726934000004,
+      "fps": 8.375422207615905,
+      "decoded_frames": 90,
+      "stages": {
+        "seek_seconds": 2.6828567429995474,
+        "screenshot_seconds": 5.2180092910009535,
+        "frame_wait_seconds": 0.0,
+        "pipe_write_seconds": 0.002248044999305421,
+        "finalize_seconds": 2.0988278739998805,
+        "capture_workers": 1,
+        "fast_capture": true,
+        "total_seconds": 10.284790967000163,
+        "frames": 90,
+        "end_to_end_fps": 8.750785532615538
+      }
+    },
+    {
+      "variant": "parallel_4",
+      "trial": 0,
+      "seconds": 7.8830869030000486,
+      "fps": 11.416847373044803,
+      "decoded_frames": 90,
+      "stages": {
+        "seek_seconds": 2.878790244999209,
+        "screenshot_seconds": 7.141236753000612,
+        "frame_wait_seconds": 4.002184653998938,
+        "pipe_write_seconds": 0.0344859209999413,
+        "finalize_seconds": 1.8845695679999608,
+        "capture_workers": 4,
+        "fast_capture": true,
+        "total_seconds": 6.329110150999895,
+        "frames": 90,
+        "end_to_end_fps": 14.220008477144528
+      }
+    },
+    {
+      "variant": "fast_serial",
+      "trial": 1,
+      "seconds": 10.25289103,
+      "fps": 8.778011951620243,
+      "decoded_frames": 90,
+      "stages": {
+        "seek_seconds": 2.8948113990002184,
+        "screenshot_seconds": 4.719519097001694,
+        "frame_wait_seconds": 0.0,
+        "pipe_write_seconds": 0.002166999999417385,
+        "finalize_seconds": 1.9346129190000738,
+        "capture_workers": 1,
+        "fast_capture": true,
+        "total_seconds": 9.806182572999887,
+        "frames": 90,
+        "end_to_end_fps": 9.177883374087271
+      }
+    },
+    {
+      "variant": "parallel_4",
+      "trial": 1,
+      "seconds": 6.545003078000036,
+      "fps": 13.750948460592841,
+      "decoded_frames": 90,
+      "stages": {
+        "seek_seconds": 2.9213674110008014,
+        "screenshot_seconds": 6.452002059001188,
+        "frame_wait_seconds": 3.777114304998804,
+        "pipe_write_seconds": 0.031107009001516417,
+        "finalize_seconds": 1.941142690000106,
+        "capture_workers": 4,
+        "fast_capture": true,
+        "total_seconds": 6.084460004999983,
+        "frames": 90,
+        "end_to_end_fps": 14.791781016892436
+      }
+    },
+    {
+      "variant": "legacy_serial",
+      "trial": 1,
+      "seconds": 17.97671840499993,
+      "fps": 5.006475485256974,
+      "decoded_frames": 90,
+      "stages": {
+        "seek_seconds": 3.1541848069994103,
+        "screenshot_seconds": 10.558084323000685,
+        "frame_wait_seconds": 0.0,
+        "pipe_write_seconds": 0.0022587560006286367,
+        "finalize_seconds": 3.437465470999996,
+        "capture_workers": 1,
+        "fast_capture": false,
+        "total_seconds": 17.414168850000124,
+        "frames": 90,
+        "end_to_end_fps": 5.1682053146050295
+      }
+    }
+  ],
+  "environment": {
+    "python": "3.13.5",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.41",
+    "available_logical_cpus": 5,
+    "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers",
+    "browser": "Chromium 144.0.7559.96 built on Debian GNU/Linux 13 (trixie)",
+    "note": "Local container; not the user Ryzen. Two trials, includes browser startup/render/close; decode checked outside timed region."
+  }
+}
