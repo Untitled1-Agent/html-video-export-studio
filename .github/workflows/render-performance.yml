@@ -1,0 +1,23 @@
+name: Render performance
+on:
+  push:
+    branches: [perf/parallel-browser-capture]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Snapshot tracked source for local validation
+        run: git archive --format=zip HEAD -o source-snapshot.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: render-source-snapshot
+          path: source-snapshot.zip
+          retention-days: 1
+          if-no-files-found: error
