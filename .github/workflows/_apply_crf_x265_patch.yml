@@ -1,0 +1,31 @@
+name: Apply CRF and HEVC patch
+on:
+  push:
+    branches: [feat/social-crf-x265-quality]
+    paths:
+      - tools/_apply_crf_x265_patch.py
+      - .github/workflows/_apply_crf_x265_patch.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.txt
+      - run: python tools/_apply_crf_x265_patch.py
+      - name: Commit production changes and remove temporary patch tooling
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm tools/_apply_crf_x265_patch.py .github/workflows/_apply_crf_x265_patch.yml
+          git add presets.py docs/DELIVERY_COMPATIBILITY.md docs/AUDIO.md docs/CONFIGURATION.md CHANGELOG.md tests/test_quality_profiles.py
+          git diff --cached --check
+          git commit -m "feat: raise Social CRF quality and add HEVC output"
+          git push origin HEAD:feat/social-crf-x265-quality
