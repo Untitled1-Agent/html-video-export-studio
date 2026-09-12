@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from typing import Optional
 
 from models import (
+    DEFAULT_SHARPEN_STRENGTH,
     AudioConfig,
     CaptureConfig,
     CaptureMode,
@@ -34,6 +35,10 @@ class OutputProfile:
     archival: bool = False
 
 
+# Capture geometry is validated by the renderer. Disable FFmpeg's implicit
+# output scaler: on FFmpeg 6.1 an RGB/RGBA PNG transition can insert it during
+# graph reinitialization and move RGB-to-YUV conversion to its default matrix.
+# Only media_pipeline.color_pipeline should control that conversion.
 OUTPUT_PROFILES: dict[str, OutputProfile] = {
     "lossless_rgb_mp4": OutputProfile(
         key="lossless_rgb_mp4",
@@ -41,11 +46,13 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         description=(
             "Pixel-lossless RGB H.264 master (libx264rgb, CRF 0, 4:4:4). "
             "Best fidelity and compact compared with image sequences, but limited "
-            "hardware-player compatibility."
+            "hardware-player compatibility. Not for TikTok uploads or reliable mobile "
+            "playback; use Social delivery for those destinations."
         ),
         extension="mp4",
         video_encoder="libx264rgb",
         video_args=(
+            "-noautoscale",
             "-c:v", "libx264rgb",
             "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=gbr:fullrange=on",
             "-crf", "0",
@@ -71,6 +78,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mov",
         video_encoder="prores_ks",
         video_args=(
+            "-noautoscale",
             "-c:v", "prores_ks",
             "-profile:v", "4",
             "-pix_fmt", "yuva444p10le",
@@ -94,6 +102,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mov",
         video_encoder="prores_ks",
         video_args=(
+            "-noautoscale",
             "-c:v", "prores_ks",
             "-profile:v", "3",
             "-pix_fmt", "yuv422p10le",
@@ -118,6 +127,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mp4",
         video_encoder="libx264",
         video_args=(
+            "-noautoscale",
             "-c:v", "libx264",
             "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off",
             "-crf", "8",
@@ -136,25 +146,32 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         key="h264_420_mp4",
         label="Delivery — H.264 4:2:0 MP4",
         description=(
-            "Broad compatibility for phones, browsers, and social platforms. "
+            "8-bit H.264 Main for phones, VLC, browsers, and social uploads. "
             "4:2:0 chroma subsampling may soften saturated text and fine UI edges."
         ),
         extension="mp4",
         video_encoder="libx264",
         video_args=(
+            "-noautoscale",
             "-c:v", "libx264",
-            "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off",
+            "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0",
             "-crf", "12",
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
-            "-profile:v", "high",
+            "-profile:v", "main",
+            "-tag:v", "avc1",
+            "-refs", "3",
+            "-bf", "2",
+            "-g", "120",
+            "-maxrate", "20M",
+            "-bufsize", "40M",
             "-color_range", "tv",
             "-color_primaries", "bt709",
             "-color_trc", "iec61966-2-1",
             "-colorspace", "bt709",
         ),
         audio_codec="aac",
-        audio_args=("-c:a", "aac", "-b:a", "256k"),
+        audio_args=("-c:a", "aac", "-profile:a", "aac_low", "-b:a", "256k", "-ar", "48000", "-ac", "2"),
         requires_even_dimensions=True,
     ),
     "vp9_webm": OutputProfile(
@@ -167,6 +184,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="webm",
         video_encoder="libvpx-vp9",
         video_args=(
+            "-noautoscale",
             "-c:v", "libvpx-vp9",
             "-crf", "12",
             "-b:v", "0",
@@ -250,11 +268,11 @@ PROCESSING_PRESETS: dict[str, ProcessingPreset] = {
         key="social_compensation",
         label="Social delivery — Compression compensation",
         description=(
-            "Moderate CAS designed for a later platform transcode. Use with a delivery copy, "
+            "CAS at 0.28 for sharper type and edges before a platform transcode. Use with a delivery copy, "
             "not as an exact-source reference."
         ),
         sharpen_method="cas",
-        sharpen_strength=0.22,
+        sharpen_strength=DEFAULT_SHARPEN_STRENGTH,
     ),
     "custom": ProcessingPreset(
         key="custom",
@@ -320,8 +338,8 @@ RECIPES: dict[str, Recipe] = {
         key="motion_graphics_master",
         label="Motion graphics master",
         description=(
-            "2× / 60 fps lossless RGB with content-aware clarity. Best default for UI, "
-            "SVG, typography, and social motion-design sources."
+            "2× / 60 fps lossless RGB with content-aware clarity for archival work. "
+            "Use Social delivery for phones, VLC hardware decoding, and uploads."
         ),
         scale=2.0,
         fps=60,
@@ -350,8 +368,8 @@ RECIPES: dict[str, Recipe] = {
     ),
     "social_delivery": Recipe(
         key="social_delivery",
-        label="Social delivery",
-        description="1× / 60 fps broadly compatible H.264 with restrained compression compensation.",
+        label="Social delivery — Sharp compatible MP4 (default)",
+        description="1× / 60 fps H.264 Main 4:2:0 with CAS 0.28 clarity. Default for mobile playback and social uploads; no automatic 4K upscaling.",
         scale=1.0,
         fps=60,
         output_profile_key="h264_420_mp4",

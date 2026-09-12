@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from models import DEFAULT_RECIPE_KEY
+from presets import RECIPES
 from version import APP_NAME, SETTINGS_FORMAT_VERSION
 
 
@@ -15,7 +17,7 @@ from version import APP_NAME, SETTINGS_FORMAT_VERSION
 class AppSettings:
     format_version: int = SETTINGS_FORMAT_VERSION
     workers: int = 2
-    default_recipe_key: str = "motion_graphics_master"
+    default_recipe_key: str = DEFAULT_RECIPE_KEY
     default_output_directory: str = ""
     save_next_to_source: bool = True
     overwrite: bool = False
@@ -70,7 +72,13 @@ def load_settings(path: Path | None = None) -> AppSettings:
         workers = defaults.workers
 
     recipe = data.get("default_recipe_key", defaults.default_recipe_key)
-    if not isinstance(recipe, str):
+    if not isinstance(recipe, str) or recipe not in RECIPES:
+        recipe = defaults.default_recipe_key
+
+    # Pre-fix settings saved the factory RGB master as though it were a user
+    # preference. Migrate only that legacy new-job default, never project jobs.
+    # Saving the marker makes a later explicit master selection stick.
+    if "delivery_defaults_version" not in data and recipe == "motion_graphics_master":
         recipe = defaults.default_recipe_key
 
     output = data.get("default_output_directory", defaults.default_output_directory)
@@ -112,6 +120,7 @@ def save_settings(settings: AppSettings, path: Path | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "format_version": SETTINGS_FORMAT_VERSION,
+        "delivery_defaults_version": 1,
         "workers": settings.workers,
         "default_recipe_key": settings.default_recipe_key,
         "default_output_directory": settings.default_output_directory,

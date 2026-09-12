@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from models import (
+    DEFAULT_RECIPE_KEY,
     CaptureMode,
     GeometryMode,
     LoadStrategy,
@@ -24,7 +25,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Analyze and export HTML animations/pages to video.",
     )
     parser.add_argument("sources", nargs="+", help="HTML file path(s) or http(s) URL(s).")
-    parser.add_argument("--recipe", choices=RECIPES, default="motion_graphics_master")
+    parser.add_argument("--recipe", choices=RECIPES, default=DEFAULT_RECIPE_KEY,
+                        help="Workflow recipe (default: social_delivery; sharp, compatible MP4).")
     parser.add_argument("--probe", action="store_true", help="Analyze only; write JSON to stdout.")
     parser.add_argument("--deep-analysis", action="store_true", help="Sample frames for content classification.")
     parser.add_argument("--output", type=Path, help="Output file for one source, or directory for several sources.")
