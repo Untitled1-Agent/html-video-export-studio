@@ -131,7 +131,7 @@ Extension: `mp4`. Alpha: `False`. Even dimensions required: `False`.
 
 Video arguments:
 ```text
--c:v libx264rgb -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=gbr:fullrange=on -crf 0 -preset medium -pix_fmt rgb24 -color_range pc -colorspace rgb -color_primaries bt709 -color_trc iec61966-2-1
+-noautoscale -c:v libx264rgb -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=gbr:fullrange=on -crf 0 -preset medium -pix_fmt rgb24 -color_range pc -colorspace rgb -color_primaries bt709 -color_trc iec61966-2-1
 ```
 
 Audio arguments:
@@ -147,7 +147,7 @@ Extension: `mov`. Alpha: `True`. Even dimensions required: `False`.
 
 Video arguments:
 ```text
--c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -vendor apl0 -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -vendor apl0 -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
@@ -163,7 +163,7 @@ Extension: `mov`. Alpha: `False`. Even dimensions required: `True`.
 
 Video arguments:
 ```text
--c:v prores_ks -profile:v 3 -pix_fmt yuv422p10le -vendor apl0 -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v prores_ks -profile:v 3 -pix_fmt yuv422p10le -vendor apl0 -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
@@ -179,7 +179,7 @@ Extension: `mp4`. Alpha: `False`. Even dimensions required: `False`.
 
 Video arguments:
 ```text
--c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off -crf 8 -preset slow -pix_fmt yuv444p -profile:v high444 -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off -crf 8 -preset slow -pix_fmt yuv444p -profile:v high444 -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
@@ -195,7 +195,7 @@ Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
 
 Video arguments:
 ```text
--c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 12 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 12 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
@@ -211,7 +211,7 @@ Extension: `webm`. Alpha: `False`. Even dimensions required: `False`.
 
 Video arguments:
 ```text
--c:v libvpx-vp9 -crf 12 -b:v 0 -row-mt 1 -pix_fmt yuv444p -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v libvpx-vp9 -crf 12 -b:v 0 -row-mt 1 -pix_fmt yuv444p -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:

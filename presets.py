@@ -35,6 +35,10 @@ class OutputProfile:
     archival: bool = False
 
 
+# Capture geometry is validated by the renderer. Disable FFmpeg's implicit
+# output scaler: on FFmpeg 6.1 an RGB/RGBA PNG transition can insert it during
+# graph reinitialization and move RGB-to-YUV conversion to its default matrix.
+# Only media_pipeline.color_pipeline should control that conversion.
 OUTPUT_PROFILES: dict[str, OutputProfile] = {
     "lossless_rgb_mp4": OutputProfile(
         key="lossless_rgb_mp4",
@@ -48,6 +52,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mp4",
         video_encoder="libx264rgb",
         video_args=(
+            "-noautoscale",
             "-c:v", "libx264rgb",
             "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=gbr:fullrange=on",
             "-crf", "0",
@@ -73,6 +78,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mov",
         video_encoder="prores_ks",
         video_args=(
+            "-noautoscale",
             "-c:v", "prores_ks",
             "-profile:v", "4",
             "-pix_fmt", "yuva444p10le",
@@ -96,6 +102,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mov",
         video_encoder="prores_ks",
         video_args=(
+            "-noautoscale",
             "-c:v", "prores_ks",
             "-profile:v", "3",
             "-pix_fmt", "yuv422p10le",
@@ -120,6 +127,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mp4",
         video_encoder="libx264",
         video_args=(
+            "-noautoscale",
             "-c:v", "libx264",
             "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off",
             "-crf", "8",
@@ -144,6 +152,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="mp4",
         video_encoder="libx264",
         video_args=(
+            "-noautoscale",
             "-c:v", "libx264",
             "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0",
             "-crf", "12",
@@ -175,6 +184,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         extension="webm",
         video_encoder="libvpx-vp9",
         video_args=(
+            "-noautoscale",
             "-c:v", "libvpx-vp9",
             "-crf", "12",
             "-b:v", "0",
