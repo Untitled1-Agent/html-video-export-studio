@@ -7,6 +7,7 @@ from pathlib import Path
 
 from models import (
     DEFAULT_RECIPE_KEY,
+    MAX_CPU_THREADS,
     CaptureMode,
     GeometryMode,
     LoadStrategy,
@@ -16,6 +17,16 @@ from models import (
 )
 from presets import OUTPUT_PROFILES, PROCESSING_PRESETS, RECIPES
 from renderer import HtmlVideoRenderer, choose_output_path
+
+
+def _cpu_threads(value: str) -> int:
+    try:
+        count = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("CPU threads must be an integer.") from exc
+    if not 0 <= count <= MAX_CPU_THREADS:
+        raise argparse.ArgumentTypeError(f"CPU threads must be between 0 and {MAX_CPU_THREADS}.")
+    return count
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,6 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, help="Output file for one source, or directory for several sources.")
     parser.add_argument("--scale", type=float)
     parser.add_argument("--fps", type=int)
+    parser.add_argument("--cpu-threads", type=_cpu_threads, default=0, metavar="N",
+                        help="Encoder threads per export; 0 selects a CPU-aware budget (default).")
     parser.add_argument("--profile", choices=OUTPUT_PROFILES)
     parser.add_argument("--processing", choices=PROCESSING_PRESETS)
     parser.add_argument("--capture", choices=[item.value for item in CaptureMode])
@@ -55,6 +68,7 @@ def make_job(source: str, args: argparse.Namespace):
     kind = SourceKind.URL if source.startswith(("http://", "https://")) else SourceKind.FILE
     value = source if kind == SourceKind.URL else str(Path(source).expanduser().resolve())
     job = RECIPES[args.recipe].create_job(value, kind)
+    job.render.cpu_threads = args.cpu_threads
     if args.scale is not None:
         job.render.scale = args.scale
     if args.fps is not None:

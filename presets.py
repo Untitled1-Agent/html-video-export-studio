@@ -449,4 +449,5 @@ def apply_recipe(job: JobConfig, recipe_key: str) -> JobConfig:
     fresh.render.save_next_to_source = job.render.save_next_to_source
     fresh.render.overwrite = job.render.overwrite
     fresh.render.filename_template = job.render.filename_template
+    fresh.render.cpu_threads = job.render.cpu_threads
     return fresh

@@ -6,12 +6,89 @@ import re
 import shutil
 import subprocess
 import threading
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import imageio_ffmpeg
 
+if TYPE_CHECKING:
+    from models import JobConfig
+
 _cache: dict[str, dict[str, set[str]]] = {}
 _lock = threading.Lock()
+
+
+@dataclass(frozen=True)
+class FFmpegThreadPlan:
+    """Separate FFmpeg pools, not a hard process-wide CPU/thread limit."""
+
+    encoder: int
+    filters: int
+    decoder: int
+
+
+def available_cpu_count() -> int:
+    """Respect affinity where supported, including Python 3.10-3.12.
+
+    Do not cache: an embedding application can change affinity between exports.
+    CPU-time quotas and the load from unrelated applications are not measured.
+    """
+    counts: list[int] = []
+    process_count = getattr(os, 'process_cpu_count', None)
+    if process_count is not None:
+        try:
+            count = process_count()
+            if count and count > 0:
+                counts.append(count)
+        except (OSError, NotImplementedError):
+            pass
+    affinity = getattr(os, 'sched_getaffinity', None)
+    if affinity is not None:
+        try:
+            count = len(affinity(0))
+            if count:
+                counts.append(count)
+        except (OSError, NotImplementedError):
+            pass
+    if counts:
+        return min(counts)
+    return max(1, os.cpu_count() or 1)
+
+
+def resolve_cpu_threads(requested: int = 0, concurrent_jobs: int = 1) -> int:
+    """Resolve 0=auto into a bounded encoder pool per simultaneous export.
+
+    Reserve one logical CPU as headroom for capture/UI, divide by the queue's
+    effective concurrency, and cap automatic pools at 32 to bound frame buffers.
+    Explicit 1..256 overrides are per job and are never silently divided.
+    """
+    from models import MAX_CPU_THREADS, strict_int
+
+    requested = strict_int(requested)
+    concurrent_jobs = strict_int(concurrent_jobs)
+    if not 0 <= requested <= MAX_CPU_THREADS:
+        raise ValueError(f'CPU threads must be between 0 (automatic) and {MAX_CPU_THREADS}.')
+    if concurrent_jobs < 1:
+        raise ValueError('Concurrent jobs must be a positive integer.')
+    if requested:
+        return requested
+    return min(32, max(1, (available_cpu_count() - 1) // concurrent_jobs))
+
+
+def ffmpeg_thread_plan(requested: int = 0) -> FFmpegThreadPlan:
+    """Do not give each pipeline stage its own unrestricted all-core pool."""
+    encoder = resolve_cpu_threads(requested)
+    return FFmpegThreadPlan(encoder=encoder, filters=min(8, encoder), decoder=min(4, encoder))
+
+
+def snapshot_for_export(job: JobConfig, concurrent_jobs: int = 1) -> JobConfig:
+    """Resolve queue CPU allocation only in a deep copy, never the saved job."""
+    import copy
+
+    snapshot = copy.deepcopy(job)
+    snapshot.render.cpu_threads = resolve_cpu_threads(job.render.cpu_threads, concurrent_jobs)
+    return snapshot
 
 
 def ffmpeg_candidates() -> list[str]:

@@ -1707,15 +1707,18 @@ class HtmlVideoRenderer:
     ) -> list[str]:
         ffmpeg = getattr(self, '_ffmpeg_exe', None) or get_ffmpeg_executable()
         profile = OUTPUT_PROFILES[job.render.output_profile_key]
-        from media_pipeline import color_pipeline
+        from media_pipeline import color_pipeline, ffmpeg_thread_plan
+        threads = ffmpeg_thread_plan(job.render.cpu_threads)
+        _log(getattr(self, 'log_callback', None),
+             f'FFmpeg CPU threads: encoder={threads.encoder}, filters={threads.filters}, decoder={threads.decoder}.')
         filter_chain = color_pipeline(filter_chain, profile.video_encoder == 'libx264rgb')
         command = [
             ffmpeg,
             "-hide_banner",
             "-loglevel", "error",
             "-y",
-            "-filter_threads", "1",
-            "-threads", "2",
+            "-filter_threads", str(threads.filters),
+            "-threads:v", str(threads.decoder),
             "-f", "image2pipe",
             "-framerate", str(job.render.fps),
             "-vcodec", "png",
@@ -1735,7 +1738,7 @@ class HtmlVideoRenderer:
         if filter_chain:
             command.extend(["-vf", filter_chain])
         command.extend(profile.video_args)
-        command.extend(['-threads:v','2'])
+        command.extend(['-threads:v', str(threads.encoder)])
 
         if has_audio:
             audio_filters: list[str] = ['asetpts=PTS-STARTPTS']

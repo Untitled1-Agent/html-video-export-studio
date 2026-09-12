@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Performance
+
+- Replace fixed FFmpeg video thread counts with CPU-aware, bounded automatic pools.
+- Add per-job CPU thread controls in the desktop, CLI, and project/Python model.
+- Share automatic budgets across effective queue workers without changing saved jobs.
+- Add decoded-media/queue regressions and a reproducible encoding benchmark.
+- Retain existing delivery compatibility, color conversion, and exact RGB behavior.
+
 ## 1.5.2 — repository preparation
 
 
