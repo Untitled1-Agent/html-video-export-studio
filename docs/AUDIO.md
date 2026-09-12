@@ -46,7 +46,7 @@ The video profile controls the audio codec; audio controls cannot override it wi
 
 | Video container/profile | Audio codec |
 | --- | --- |
-| H.264 MP4, including Social delivery | AAC-LC |
+| H.264 or H.265/HEVC MP4, including Social delivery | AAC-LC |
 | ProRes MOV editing masters | 24-bit PCM |
 | VP9 WebM | Opus |
 

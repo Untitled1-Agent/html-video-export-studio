@@ -197,13 +197,29 @@ Audio arguments:
 
 ### `h264_420_mp4`
 
-8-bit H.264 Main for phones, VLC, browsers, and social uploads. 4:2:0 chroma subsampling may soften saturated text and fine UI edges.
+8-bit H.264 Main at high-quality CRF 8 for phones, VLC, browsers, and social uploads. 4:2:0 chroma subsampling may soften saturated text and fine UI edges.
 
 Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
 
 Video arguments:
 ```text
--noautoscale -c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 12 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 8 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+```
+
+Audio arguments:
+```text
+-c:a aac -profile:a aac_low -b:a 256k -ar 48000 -ac 2
+```
+
+### `h265_420_mp4`
+
+High-quality HEVC/H.265 Main 8-bit delivery using CRF 10 and hvc1 sample entries. Usually more efficient than H.264 at comparable fidelity, but playback and social-upload support is less universal; Social delivery intentionally remains H.264 by default.
+
+Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
+
+Video arguments:
+```text
+-noautoscale -c:v libx265 -x265-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:range=limited:open-gop=0:log-level=error -crf 10 -preset slow -pix_fmt yuv420p -profile:v main -tag:v hvc1 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
@@ -235,7 +251,7 @@ usage: html-video-export [-h]
                          [--probe] [--deep-analysis] [--output OUTPUT] [--scale SCALE]
                          [--fps FPS] [--cpu-threads N] [--capture-workers N]
                          [--frame-buffer-mb MIB] [--no-fast-capture]
-                         [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,vp9_webm}]
+                         [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,vp9_webm}]
                          [--processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}]
                          [--capture {auto,marker,selector,viewport,full_page}]
                          [--selector SELECTOR]
@@ -279,7 +295,7 @@ options:
                         (default: 256).
   --no-fast-capture     Use legacy element screenshot waits instead of the guarded
                         viewport fast path.
-  --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,vp9_webm}
+  --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,vp9_webm}
   --processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}
   --capture {auto,marker,selector,viewport,full_page}
   --selector SELECTOR

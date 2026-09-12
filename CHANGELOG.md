@@ -9,6 +9,11 @@
 
 ## Unreleased
 
+### Encoding quality
+
+- Raise the default Social delivery H.264 quality from CRF 12 to CRF 8 while retaining CRF rate control, the existing compatibility constraints, and the 20 Mb/s VBV ceiling.
+- Add an opt-in H.265/HEVC Main 4:2:0 MP4 profile using libx265 CRF 10, hvc1 sample entries, fast-start MP4, explicit BT.709/sRGB metadata, and AAC-LC audio. Social delivery remains H.264 by default for broader playback/upload compatibility.
+
 ### Added
 
 - MIT License (LICENSE); project license declared in pyproject metadata.

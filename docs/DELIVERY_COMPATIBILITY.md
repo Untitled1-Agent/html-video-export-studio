@@ -37,7 +37,7 @@ for every profile, including archival and alpha-capable outputs.
 
 New desktop, CLI and Python API jobs use **Social delivery — Sharp compatible
 MP4 (default)**: native 1× capture, 60 fps, 8-bit H.264 Main / `yuv420p`, `avc1`
-sample entries, and CRF 12 / slow encoding. Closed GOPs, at most 120 frames
+sample entries, and CRF 8 / slow encoding. Closed GOPs, at most 120 frames
 between keyframes, three reference frames, two B-frames and a 20 Mb/s VBV ceiling
 with a 40 Mb buffer bound delivery complexity. The existing fast-start MP4
 layout remains enabled. An external soundtrack is encoded as AAC-LC stereo at
@@ -48,6 +48,13 @@ auto analysis that may disable sharpening. It improves edge definition, not
 missing source detail. It does not increase contrast or saturation. Choose
 No processing to disable it, or Exact source master for unprocessed lossless RGB.
 No implicit geometric resizing, clipping or padding was introduced.
+
+An optional **High Efficiency — H.265/HEVC 4:2:0 MP4** profile uses
+`libx265`, CRF 10 / slow, Main 8-bit 4:2:0, `hvc1`, the same explicit colour
+metadata and AAC-LC 48 kHz stereo audio defaults. It is intended for controlled
+modern-device workflows where HEVC support has been verified. It is **not** the
+Social delivery default because browser/player/upload acceptance is less
+universal than H.264.
 
 RGB-to-YUV conversion remains explicit: BT.709 primaries/matrix, limited YUV
 range and the screenshot's sRGB transfer. Relabelling sRGB pixels as BT.709
