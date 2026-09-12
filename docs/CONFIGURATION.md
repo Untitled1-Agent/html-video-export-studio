@@ -47,9 +47,9 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 
 | Field | Type | Default |
 | --- | --- | --- |
-| `scale` | `float` | `2.0` |
+| `scale` | `float` | `1.0` |
 | `fps` | `int` | `60` |
-| `output_profile_key` | `str` | `"lossless_rgb_mp4"` |
+| `output_profile_key` | `str` | `"h264_420_mp4"` |
 | `processing` | `ProcessingConfig` | `(nested settings)` |
 | `audio` | `AudioConfig` | `(nested settings)` |
 | `overwrite` | `bool` | `false` |
@@ -61,9 +61,9 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 
 | Field | Type | Default |
 | --- | --- | --- |
-| `preset_key` | `str` | `"auto_content_aware"` |
+| `preset_key` | `str` | `"social_compensation"` |
 | `sharpen_method` | `str` | `"cas"` |
-| `sharpen_strength` | `float` | `0.16` |
+| `sharpen_strength` | `float` | `0.28` |
 | `contrast` | `float` | `1.0` |
 | `saturation` | `float` | `1.0` |
 | `brightness` | `float` | `0.0` |
@@ -118,14 +118,14 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 | `ui_subtle` | cas | 0.18 |
 | `ui_balanced` | cas | 0.28 |
 | `photo_gentle` | cas | 0.07 |
-| `social_compensation` | cas | 0.22 |
+| `social_compensation` | cas | 0.28 |
 | `custom` | none | 0 |
 
 ## Codec configuration
 
 ### `lossless_rgb_mp4`
 
-Pixel-lossless RGB H.264 master (libx264rgb, CRF 0, 4:4:4). Best fidelity and compact compared with image sequences, but limited hardware-player compatibility.
+Pixel-lossless RGB H.264 master (libx264rgb, CRF 0, 4:4:4). Best fidelity and compact compared with image sequences, but limited hardware-player compatibility. Not for TikTok uploads or reliable mobile playback; use Social delivery for those destinations.
 
 Extension: `mp4`. Alpha: `False`. Even dimensions required: `False`.
 
@@ -189,18 +189,18 @@ Audio arguments:
 
 ### `h264_420_mp4`
 
-Broad compatibility for phones, browsers, and social platforms. 4:2:0 chroma subsampling may soften saturated text and fine UI edges.
+8-bit H.264 Main for phones, VLC, browsers, and social uploads. 4:2:0 chroma subsampling may soften saturated text and fine UI edges.
 
 Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
 
 Video arguments:
 ```text
--c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off -crf 12 -preset slow -pix_fmt yuv420p -profile:v high -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 12 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
 ```text
--c:a aac -b:a 256k
+-c:a aac -profile:a aac_low -b:a 256k -ar 48000 -ac 2
 ```
 
 ### `vp9_webm`
@@ -248,6 +248,8 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --recipe {motion_graphics_master,exact_source_master,editing_master,social_delivery,web_animation,video_element,static_page_hold,website_capture}
+                        Workflow recipe (default: social_delivery; sharp, compatible
+                        MP4).
   --probe               Analyze only; write JSON to stdout.
   --deep-analysis       Sample frames for content classification.
   --output OUTPUT       Output file for one source, or directory for several sources.

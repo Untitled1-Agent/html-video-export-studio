@@ -14,7 +14,9 @@ ProRes 4444/HQ, H.264 delivery and VP9 are not lossless source references. H.264
 
 ## Clarity
 
-Presets: UI Subtle CAS 0.18; UI Balanced CAS 0.28; Photo Gentle 0.07; Social Compensation 0.22; No processing; Custom. Values are artistic preferences, not objectively optimal quality guarantees.
+New desktop, CLI and Python API jobs use Social delivery: 1× / 60 fps, H.264 Main 4:2:0, and explicit Social Compensation sharpening. Auto content-aware processing remains available but is no longer the default; it could select no sharpening. See [delivery compatibility](DELIVERY_COMPATIBILITY.md) for migration and playback limits.
+
+Presets: UI Subtle CAS 0.18; UI Balanced CAS 0.28; Photo Gentle 0.07; Social Compensation 0.28 (new-job default); No processing; Custom. Values are artistic preferences, not objectively optimal quality guarantees.
 
 Automatic analysis excludes the edge detector's artificial image border and near-uniform bright/dark frames. It samples multiple positions within the trimmed source window for seekable sources. Ambiguous/photographic results stay unprocessed. It does not advance real-time/virtual-clock sources to gather samples, and alpha captures bypass automatic processing. Test-frame and comparison previews use the same selection logic as export.
 

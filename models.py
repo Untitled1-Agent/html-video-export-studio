@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+# Shared defaults for the Python API, CLI and desktop new-job recipe.
+DEFAULT_RECIPE_KEY = "social_delivery"
+DEFAULT_SHARPEN_STRENGTH = 0.28
+
+
 def strict_int(value: Any) -> int:
     if isinstance(value, bool): raise ValueError('Boolean is not an integer setting.')
     number = float(value)
@@ -189,9 +194,9 @@ class TimelineConfig:
 
 @dataclass
 class ProcessingConfig:
-    preset_key: str = "auto_content_aware"
+    preset_key: str = "social_compensation"
     sharpen_method: str = "cas"
-    sharpen_strength: float = 0.16
+    sharpen_strength: float = DEFAULT_SHARPEN_STRENGTH
     contrast: float = 1.0
     saturation: float = 1.0
     brightness: float = 0.0
@@ -235,9 +240,9 @@ class AudioConfig:
 
 @dataclass
 class RenderConfig:
-    scale: float = 2.0
+    scale: float = 1.0
     fps: int = 60
-    output_profile_key: str = "lossless_rgb_mp4"
+    output_profile_key: str = "h264_420_mp4"
     processing: ProcessingConfig = field(default_factory=ProcessingConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     overwrite: bool = False
@@ -279,7 +284,7 @@ class JobConfig:
     capture: CaptureConfig = field(default_factory=CaptureConfig)
     timeline: TimelineConfig = field(default_factory=TimelineConfig)
     render: RenderConfig = field(default_factory=RenderConfig)
-    recipe_key: str = "motion_graphics_master"
+    recipe_key: str = DEFAULT_RECIPE_KEY
 
     def validate(self, for_export: bool = True) -> None:
         self.source.validate()
@@ -500,5 +505,5 @@ def job_config_from_dict(data: dict[str, Any]) -> JobConfig:
         capture=capture,
         timeline=timeline,
         render=render,
-        recipe_key=str(data.get("recipe_key", "motion_graphics_master")),
+        recipe_key=str(data.get("recipe_key", DEFAULT_RECIPE_KEY)),
     )

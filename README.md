@@ -6,7 +6,7 @@ Version **1.5.2** · Python **3.10+** · Chromium + FFmpeg · Windows / macOS / 
 
 Capture a marked animation, SVG, canvas, video element, selected DOM element, browser viewport, or full page. Inspect the source, choose its timing adapter, preview a frame, then export one job or a parallel queue. The application is local; it does not require an export service or a paid rendering API.
 
-> **Fidelity first:** “Exact source master” uses native browser rasterization and lossless RGB encoding, with **No processing**. “Motion graphics master,” the new-job default, instead enables optional content-aware clarity. These are different workflows, not two names for the same output.
+> **Sharp, compatible exports by default:** “Social delivery” uses 1× / 60 fps, 8-bit H.264 Main 4:2:0 MP4 and CAS 0.28 clarity. Use it for mobile playback and social uploads. “Exact source master” remains an explicit lossless RGB / No processing option for archival fidelity, not a mobile-delivery format. [VLC / Android / TikTok compatibility](docs/DELIVERY_COMPATIBILITY.md).
 
 [Documentation index](docs/README.md) · [Installation](docs/INSTALLATION.md) · [User guide](docs/USER_GUIDE.md) · [CLI](docs/CLI.md) · [Source adapters](docs/UNIVERSAL_CAPTURE_GUIDE.md) · [Configuration](docs/CONFIGURATION.md) · [Testing](TEST_REPORT.md)
 
@@ -55,12 +55,12 @@ On Debian/Ubuntu, missing prerequisites can be installed with `sudo apt-get inst
 
 ### Your first export
 
-Open **Add HTML**, select a local file, and run **Analyze**. Check the capture target, source dimensions, timing adapter, duration source, and diagnostics. Choose **Exact source master**, leave **2× / 60 fps / No processing**, then use **Test frame** to inspect the result. Start the queue only after the preview and duration are correct.
+Open **Add HTML**, select a local file, and run **Analyze**. Check the capture target, source dimensions, timing adapter, duration source, and diagnostics. Keep **Social delivery — Sharp compatible MP4 (default)** with **1× / 60 fps / Social Compensation**, then use **Test frame** to inspect the result. Start the queue only after the preview and duration are correct.
 
 Try a bundled example without customer assets:
 
 ```bash
-python cli.py examples/canvas_function.html --recipe exact_source_master --timeline javascript_function --seek-function window.demo.renderAt --load embedded --output exports
+python cli.py examples/canvas_function.html --recipe social_delivery --timeline javascript_function --seek-function window.demo.renderAt --load embedded --output exports
 ```
 
 The examples are self-contained demonstrations; no customer HTML, poster assets, font files, access tokens, or rendered movies are included.
@@ -75,7 +75,7 @@ The examples are self-contained demonstrations; no customer HTML, poster assets,
 | ProRes 4444 | MOV | Editing and transparent compositions | Lossy codec, large files, not new 10-bit source detail |
 | ProRes 422 HQ | MOV | Editing interchange | Chroma subsampling; even dimensions enforced |
 | H.264 4:4:4 | MP4 | Smaller high-quality UI video | Lossy, less broadly compatible than 4:2:0 |
-| H.264 4:2:0 | MP4 | Delivery to common players | Chroma subsampling can soften saturated text |
+| H.264 Main 4:2:0 (default) | MP4 | Mobile playback and social uploads | Chroma subsampling can soften saturated text |
 | VP9 4:4:4 | WebM | Web-oriented delivery | Encoding speed and player/editor support vary |
 
 **No processing + Lossless RGB** omits FFmpeg visual filters and preserves the captured RGB samples through encoding. With another profile, “No processing” means no enhancement; color conversion still occurs. With a filter selected, a lossless encoder preserves the *processed* pixels, not the unmodified source.

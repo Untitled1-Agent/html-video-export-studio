@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from typing import Optional
 
 from models import (
+    DEFAULT_SHARPEN_STRENGTH,
     AudioConfig,
     CaptureConfig,
     CaptureMode,
@@ -41,7 +42,8 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         description=(
             "Pixel-lossless RGB H.264 master (libx264rgb, CRF 0, 4:4:4). "
             "Best fidelity and compact compared with image sequences, but limited "
-            "hardware-player compatibility."
+            "hardware-player compatibility. Not for TikTok uploads or reliable mobile "
+            "playback; use Social delivery for those destinations."
         ),
         extension="mp4",
         video_encoder="libx264rgb",
@@ -136,25 +138,31 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         key="h264_420_mp4",
         label="Delivery — H.264 4:2:0 MP4",
         description=(
-            "Broad compatibility for phones, browsers, and social platforms. "
+            "8-bit H.264 Main for phones, VLC, browsers, and social uploads. "
             "4:2:0 chroma subsampling may soften saturated text and fine UI edges."
         ),
         extension="mp4",
         video_encoder="libx264",
         video_args=(
             "-c:v", "libx264",
-            "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off",
+            "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0",
             "-crf", "12",
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
-            "-profile:v", "high",
+            "-profile:v", "main",
+            "-tag:v", "avc1",
+            "-refs", "3",
+            "-bf", "2",
+            "-g", "120",
+            "-maxrate", "20M",
+            "-bufsize", "40M",
             "-color_range", "tv",
             "-color_primaries", "bt709",
             "-color_trc", "iec61966-2-1",
             "-colorspace", "bt709",
         ),
         audio_codec="aac",
-        audio_args=("-c:a", "aac", "-b:a", "256k"),
+        audio_args=("-c:a", "aac", "-profile:a", "aac_low", "-b:a", "256k", "-ar", "48000", "-ac", "2"),
         requires_even_dimensions=True,
     ),
     "vp9_webm": OutputProfile(
@@ -250,11 +258,11 @@ PROCESSING_PRESETS: dict[str, ProcessingPreset] = {
         key="social_compensation",
         label="Social delivery — Compression compensation",
         description=(
-            "Moderate CAS designed for a later platform transcode. Use with a delivery copy, "
+            "CAS at 0.28 for sharper type and edges before a platform transcode. Use with a delivery copy, "
             "not as an exact-source reference."
         ),
         sharpen_method="cas",
-        sharpen_strength=0.22,
+        sharpen_strength=DEFAULT_SHARPEN_STRENGTH,
     ),
     "custom": ProcessingPreset(
         key="custom",
@@ -320,8 +328,8 @@ RECIPES: dict[str, Recipe] = {
         key="motion_graphics_master",
         label="Motion graphics master",
         description=(
-            "2× / 60 fps lossless RGB with content-aware clarity. Best default for UI, "
-            "SVG, typography, and social motion-design sources."
+            "2× / 60 fps lossless RGB with content-aware clarity for archival work. "
+            "Use Social delivery for phones, VLC hardware decoding, and uploads."
         ),
         scale=2.0,
         fps=60,
@@ -350,8 +358,8 @@ RECIPES: dict[str, Recipe] = {
     ),
     "social_delivery": Recipe(
         key="social_delivery",
-        label="Social delivery",
-        description="1× / 60 fps broadly compatible H.264 with restrained compression compensation.",
+        label="Social delivery — Sharp compatible MP4 (default)",
+        description="1× / 60 fps H.264 Main 4:2:0 with CAS 0.28 clarity. Default for mobile playback and social uploads; no automatic 4K upscaling.",
         scale=1.0,
         fps=60,
         output_profile_key="h264_420_mp4",
