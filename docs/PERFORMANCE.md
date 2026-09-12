@@ -47,10 +47,12 @@ budget for constrained containers or when running several independent instances.
 
 ## What is and is not accelerated
 
-This changes FFmpeg video decoder, filter, and encoder parallelism. Browser page
-seeking and screenshots remain ordered on their owning Playwright thread. Timer,
-media, and stateful JavaScript timelines are not divided among shared browser
-threads. PNG previews keep their existing conservative processing path.
+These CPU-thread controls change FFmpeg decoder, filter and encoder pools.
+For capture-bound movies, the separate [single-video capture controls](PARALLEL_CAPTURE.md)
+add independent browser workers for declared-safe/explicitly opted-in seekable
+sources, plus a guarded viewport screenshot fast path. Each browser stays on
+its owning Playwright thread; stateful Browser Clock/Realtime remain sequential.
+PNG previews keep the same processing/color path and can use the guarded screenshot optimization.
 
 More threads can improve encoding-heavy work; capture-bound, small, or static
 jobs may see less benefit or even overhead. Start with automatic mode; for one

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — browser capture performance
+
+- Add ordered, bounded single-export browser capture workers with independent Playwright ownership.
+- Auto parallelism requires an author declaration; explicit 2+ workers require independently seekable sources. Progressive timelines remain sequential.
+- Use viewport screenshots for geometry-guarded roots only when their live bounds match the viewport; retain the legacy fallback and an opt-out.
+- Add GUI/CLI controls, per-stage render timing, actual browser-render regressions and an end-to-end benchmark.
+
 ## Unreleased
 
 ### Performance
