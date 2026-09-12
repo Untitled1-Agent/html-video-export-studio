@@ -2,7 +2,7 @@ name: Audio implementation validation
 on:
   push:
     branches: [feat/per-html-audio-sync]
-    paths: [tools/_apply_audio_patch.py]
+    paths: [tools/_apply_audio_patch.py, .github/workflows/audio-development.yml]
 permissions:
   contents: read
 jobs:
@@ -24,15 +24,17 @@ jobs:
           sudo apt-get install -y python3-tk xvfb ffmpeg
           python -m pip install -r requirements-dev.txt
           python -m playwright install --with-deps chromium
-      - name: Apply reviewed changes on the feature branch
+      - name: Apply source changes on the feature branch
         run: |
           python tools/_apply_audio_patch.py
           python tools/generate_reference.py
-          git rm tools/_apply_audio_patch.py .github/workflows/audio-development.yml
-          git add models.py media_pipeline.py renderer.py app.py cli.py presets.py docs README.md tests .github/workflows/tests.yml
+          git restore .github/workflows/tests.yml
+          git rm tools/_apply_audio_patch.py
+          git add models.py media_pipeline.py renderer.py app.py cli.py presets.py docs README.md tests
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Add per-HTML soundtracks, signed sync, and configurable audio delivery'
           git push origin HEAD:feat/per-html-audio-sync
           git rev-parse HEAD
+          rm .github/workflows/audio-development.yml
       - name: Documentation and metadata consistency
         run: python tools/check_docs.py
       - name: Full regression gate including audio and desktop tests
