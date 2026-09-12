@@ -23,7 +23,9 @@ class AudioCoreTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        # Match canonical application paths: Windows may use 8.3 aliases and
+        # macOS temporary directories may pass through the /var symlink.
+        self.root = Path(self.tmp.name).resolve()
         self.html = self.root / 'Example.html'
         self.html.write_text('<html></html>', encoding='utf-8')
         self.wav = self.root / 'example.WAV'
