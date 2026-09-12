@@ -450,4 +450,6 @@ def apply_recipe(job: JobConfig, recipe_key: str) -> JobConfig:
     fresh.render.overwrite = job.render.overwrite
     fresh.render.filename_template = job.render.filename_template
     fresh.render.cpu_threads = job.render.cpu_threads
+    import copy
+    fresh.render.audio = copy.deepcopy(job.render.audio)
     return fresh

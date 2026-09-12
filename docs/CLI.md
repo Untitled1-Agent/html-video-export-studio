@@ -34,3 +34,7 @@ Exit codes: **0** success; **1** source/export/environment failure; **2** comman
 `--recipe` chooses initial settings; explicit flags override them. `--scale`, `--fps`, `--profile`, `--processing` affect the output. `--capture`, `--selector`, `--viewport WIDTH HEIGHT`, `--geometry`, and `--load` configure capture/loading. Supplying `--selector` selects selector mode. `--timeline`, `--duration`, `--trim-start`, `--trim-end`, `--hold-start`, and `--hold-end` configure timing. `--seek-function` is a JavaScript property path, not arbitrary Python code; `--event-name` selects a custom DOM event.
 
 [Generated configuration and complete CLI help](CONFIGURATION.md) lists the accepted enum/preset keys. There is **no** `--project`, `--workers`, or external-audio flag in this CLI release. Projects, parallel queueing, selector index, manual intrinsic dimensions, custom processing details and audio are accessible through the desktop/Python API. This distinction prevents copying a command for a feature that exists only in the GUI.
+
+## External soundtracks
+
+Match WAV/M4A/MP3 files to individual HTML jobs, use signed audio sync, and adjust gain, looping, fades, encoding quality, or optional normalization. See the [soundtrack guide](AUDIO.md) for desktop controls, CLI batch mapping, timing semantics, and social-delivery defaults.
