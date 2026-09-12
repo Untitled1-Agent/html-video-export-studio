@@ -80,6 +80,10 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 | `offset_seconds` | `float` | `0.0` |
 | `fade_in_seconds` | `float` | `0.0` |
 | `fade_out_seconds` | `float` | `0.0` |
+| `bitrate_kbps` | `int` | `0` |
+| `sample_rate_hz` | `int` | `0` |
+| `channels` | `int` | `0` |
+| `normalize_loudness` | `bool` | `false` |
 
 ## Enumerations
 
@@ -238,7 +242,13 @@ usage: html-video-export [-h]
                          [--geometry {auto,lock_intrinsic,preserve_layout}]
                          [--load {auto,loopback_http,file_url,embedded,remote_url}]
                          [--seek-function SEEK_FUNCTION] [--event-name EVENT_NAME]
-                         [--overwrite]
+                         [--audio FILE | --audio-map HTML AUDIO | --audio-dir DIR]
+                         [--audio-mode {none,trim,loop}] [--audio-volume GAIN]
+                         [--audio-offset SECONDS] [--audio-fade-in SECONDS]
+                         [--audio-fade-out SECONDS]
+                         [--audio-bitrate {0,64,96,128,160,192,256}]
+                         [--audio-sample-rate {0,44100,48000}]
+                         [--audio-channels {0,1,2}] [--audio-normalize] [--overwrite]
                          sources [sources ...]
 
 Analyze and export HTML animations/pages to video.
@@ -276,4 +286,30 @@ options:
   --event-name EVENT_NAME
                         Custom seek event name.
   --overwrite
+
+External soundtrack:
+  --audio FILE          Attach one audio file to every input (WAV/M4A/MP3 and more).
+  --audio-map HTML AUDIO
+                        Match a track to one input; repeat for a batch. Unmapped inputs
+                        stay silent.
+  --audio-dir DIR       Match each local HTML to a unique same-basename track in DIR.
+  --audio-mode {none,trim,loop}
+                        Use once and pad/trim (default with a track), loop, or disable
+                        audio.
+  --audio-volume GAIN   Linear gain: 0=mute, 1=original, 0.5=half amplitude.
+  --audio-offset SECONDS
+                        Signed sync: + delays audio; - skips its beginning. Video length
+                        is unchanged.
+  --audio-fade-in SECONDS
+                        Fade from the audible start, after any leading silence.
+  --audio-fade-out SECONDS
+                        Fade ending at the video end.
+  --audio-bitrate {0,64,96,128,160,192,256}
+                        AAC/Opus kbps; 0=profile default. PCM masters ignore bitrate.
+  --audio-sample-rate {0,44100,48000}
+                        Output Hz; 0=profile default. WebM/Opus requires 48000.
+  --audio-channels {0,1,2}
+                        0=profile default, 1=mono, 2=stereo.
+  --audio-normalize     Optional single-pass loudness normalization to -16 LUFS before
+                        gain/fades.
 ```

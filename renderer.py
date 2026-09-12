@@ -1681,22 +1681,30 @@ class HtmlVideoRenderer:
             raise ExportError('This output profile cannot preserve transparency.')
         if job.capture.transparent_background and filter_chain:
             raise ExportError('Transparent masters currently require No processing to preserve alpha exactly.')
-        from media_pipeline import select_ffmpeg, filter_names, color_pipeline
+        from media_pipeline import (select_ffmpeg, filter_names, color_pipeline,
+                                    audio_source_path, build_audio_filter_chain,
+                                    build_audio_output_args, validate_audio_stream)
         effective_chain = color_pipeline(filter_chain, profile.video_encoder == 'libx264rgb')
         required_filters = filter_names(effective_chain)
-        required_encoders={profile.video_encoder}
-        if job.render.audio.mode != AudioMode.NONE:
-            audio=Path(job.render.audio.path).expanduser()
-            if not audio.is_file(): raise ExportError(f'Audio file not found: {audio}')
+        required_encoders = {profile.video_encoder}
+        audio = job.render.audio
+        if audio.mode != AudioMode.NONE:
+            try:
+                audio_source_path(audio.path)
+                build_audio_output_args(audio, profile)
+                required_filters.update(filter_names(build_audio_filter_chain(audio, 1.0)))
+            except ValueError as exc:
+                raise ExportError(str(exc)) from exc
             required_encoders.add(profile.audio_codec)
-            required_filters.update({'asetpts', 'apad', 'atrim'})
-            if job.render.audio.offset_seconds > 0:
-                required_filters.add('adelay')
-            if not math.isclose(job.render.audio.volume, 1.0, abs_tol=1e-9):
-                required_filters.add('volume')
-            if job.render.audio.fade_in_seconds > 0 or job.render.audio.fade_out_seconds > 0:
+            required_filters.add('aresample')
+            if audio.fade_in_seconds > 0 or audio.fade_out_seconds > 0:
                 required_filters.add('afade')
         self._ffmpeg_exe = select_ffmpeg(required_encoders, required_filters)
+        if audio.mode != AudioMode.NONE:
+            try:
+                validate_audio_stream(self._ffmpeg_exe, audio.path)
+            except ValueError as exc:
+                raise ExportError(str(exc)) from exc
 
     def _build_ffmpeg_command(
         self,
@@ -1741,22 +1749,9 @@ class HtmlVideoRenderer:
         command.extend(['-threads:v', str(threads.encoder)])
 
         if has_audio:
-            audio_filters: list[str] = ['asetpts=PTS-STARTPTS']
-            if audio.offset_seconds > 0:
-                audio_filters.append(f'adelay={audio.offset_seconds*1000:.3f}:all=1')
-            audio_filters.extend(['apad', f'atrim=duration={output_duration:.9f}'])
-            if not math.isclose(audio.volume, 1.0, abs_tol=1e-9):
-                audio_filters.append(f"volume={audio.volume:.6f}")
-            if audio.fade_in_seconds > 0:
-                audio_filters.append(f"afade=t=in:st=0:d={audio.fade_in_seconds:.6f}")
-            if audio.fade_out_seconds > 0:
-                fade_start = max(0.0, output_duration - audio.fade_out_seconds)
-                audio_filters.append(
-                    f"afade=t=out:st={fade_start:.6f}:d={audio.fade_out_seconds:.6f}"
-                )
-            if audio_filters:
-                command.extend(["-af", ",".join(audio_filters)])
-            command.extend(profile.audio_args)
+            from media_pipeline import build_audio_filter_chain, build_audio_output_args
+            command.extend(["-af", build_audio_filter_chain(audio, output_duration)])
+            command.extend(build_audio_output_args(audio, profile))
         else:
             command.append("-an")
 

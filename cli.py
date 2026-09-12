@@ -60,8 +60,79 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--load", choices=[m.value for m in LoadStrategy])
     parser.add_argument("--seek-function", default="", help="JavaScript method path for function adapter.")
     parser.add_argument("--event-name", default="", help="Custom seek event name.")
+    from models import AUDIO_BITRATES, AUDIO_SAMPLE_RATES, AUDIO_CHANNELS
+    sound = parser.add_argument_group('External soundtrack')
+    inputs = sound.add_mutually_exclusive_group()
+    inputs.add_argument('--audio', type=Path, metavar='FILE',
+                        help='Attach one audio file to every input (WAV/M4A/MP3 and more).')
+    inputs.add_argument('--audio-map', nargs=2, action='append', metavar=('HTML', 'AUDIO'),
+                        help='Match a track to one input; repeat for a batch. Unmapped inputs stay silent.')
+    inputs.add_argument('--audio-dir', type=Path, metavar='DIR',
+                        help='Match each local HTML to a unique same-basename track in DIR.')
+    sound.add_argument('--audio-mode', choices=('none', 'trim', 'loop'),
+                       help='Use once and pad/trim (default with a track), loop, or disable audio.')
+    sound.add_argument('--audio-volume', type=float, default=1.0, metavar='GAIN',
+                       help='Linear gain: 0=mute, 1=original, 0.5=half amplitude.')
+    sound.add_argument('--audio-offset', type=float, default=0.0, metavar='SECONDS',
+                       help='Signed sync: + delays audio; - skips its beginning. Video length is unchanged.')
+    sound.add_argument('--audio-fade-in', type=float, default=0.0, metavar='SECONDS',
+                       help='Fade from the audible start, after any leading silence.')
+    sound.add_argument('--audio-fade-out', type=float, default=0.0, metavar='SECONDS',
+                       help='Fade ending at the video end.')
+    sound.add_argument('--audio-bitrate', type=int, choices=AUDIO_BITRATES, default=0,
+                       help='AAC/Opus kbps; 0=profile default. PCM masters ignore bitrate.')
+    sound.add_argument('--audio-sample-rate', type=int, choices=AUDIO_SAMPLE_RATES, default=0,
+                       help='Output Hz; 0=profile default. WebM/Opus requires 48000.')
+    sound.add_argument('--audio-channels', type=int, choices=AUDIO_CHANNELS, default=0,
+                       help='0=profile default, 1=mono, 2=stereo.')
+    sound.add_argument('--audio-normalize', action='store_true',
+                       help='Optional single-pass loudness normalization to -16 LUFS before gain/fades.')
     parser.add_argument("--overwrite", action="store_true")
     return parser
+
+
+def _audio_source_key(value: str) -> str:
+    import os
+    return value if value.startswith(('http://', 'https://')) else os.path.normcase(str(Path(value).expanduser().resolve()))
+
+
+def _configure_audio(job, source: str, args: argparse.Namespace) -> None:
+    from media_pipeline import audio_source_path, find_matching_audio
+    from models import AudioConfig, AudioMode
+
+    path = args.audio
+    mappings = {}
+    for html, track in args.audio_map or []:
+        key = _audio_source_key(html)
+        if key in mappings:
+            raise ValueError(f'Duplicate --audio-map for {html}.')
+        mappings[key] = track
+    if mappings:
+        path = mappings.get(_audio_source_key(source))
+    if args.audio_dir is not None:
+        directory = args.audio_dir.expanduser()
+        if not directory.is_dir():
+            raise ValueError(f'Audio directory not found: {directory}')
+        path = find_matching_audio(job.source, directory.iterdir())
+        if path is None:
+            raise ValueError(f'No matching audio for {job.source.display_name} in {directory}.')
+    has_input_option = bool(args.audio or args.audio_map or args.audio_dir)
+    has_settings = (args.audio_mode not in (None, 'none') or args.audio_volume != 1.0
+                    or args.audio_offset != 0.0 or args.audio_fade_in != 0.0
+                    or args.audio_fade_out != 0.0 or args.audio_bitrate != 0
+                    or args.audio_sample_rate != 0 or args.audio_channels != 0
+                    or args.audio_normalize)
+    if not has_input_option and has_settings:
+        raise ValueError('Audio settings require --audio, --audio-map, or --audio-dir.')
+    job.render.audio = AudioConfig(
+        path=str(audio_source_path(str(path))) if path else '',
+        mode=AudioMode(args.audio_mode or 'trim') if path else AudioMode.NONE,
+        volume=args.audio_volume, offset_seconds=args.audio_offset,
+        fade_in_seconds=args.audio_fade_in, fade_out_seconds=args.audio_fade_out,
+        bitrate_kbps=args.audio_bitrate, sample_rate_hz=args.audio_sample_rate,
+        channels=args.audio_channels, normalize_loudness=args.audio_normalize,
+    )
+    job.render.audio.validate()
 
 
 def make_job(source: str, args: argparse.Namespace):
@@ -101,12 +172,21 @@ def make_job(source: str, args: argparse.Namespace):
     if args.load: job.source.load_strategy = LoadStrategy(args.load)
     if args.seek_function: job.timeline.javascript_function = args.seek_function
     if args.event_name: job.timeline.custom_event_name = args.event_name
+    _configure_audio(job, source, args)
     job.render.overwrite = args.overwrite
     return job
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    known_sources = {_audio_source_key(source) for source in args.sources}
+    mapped_sources = set()
+    for source, _track in args.audio_map or []:
+        key = _audio_source_key(source)
+        if key not in known_sources or key in mapped_sources:
+            print(f"Invalid --audio-map: {source} is not an input or is mapped more than once.", file=sys.stderr)
+            return 2
+        mapped_sources.add(key)
     if args.output is not None:
         args.output = args.output.expanduser()
     known_extensions = {'.'+p.extension for p in OUTPUT_PROFILES.values()}

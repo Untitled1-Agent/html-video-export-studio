@@ -148,3 +148,7 @@ The release gate rejects required-test skips and records unhandled thread/finali
 Only render HTML/URLs you trust. Pages execute JavaScript and can access the network; this is not an isolation environment for hostile HTML. The publishing helper is not a secret scanner: keep personal inputs outside repository source folders and review staged changes. Never put tokens in projects or reports.
 
 **A project license has not been selected.** This package does not silently assign an open-source license on the owner's behalf. Review [NOTICE.md](NOTICE.md) before public distribution, and [SECURITY.md](SECURITY.md) for handling sensitive reports.
+
+## External soundtracks
+
+Match WAV/M4A/MP3 files to individual HTML jobs, use signed audio sync, and adjust gain, looping, fades, encoding quality, or optional normalization. See the [soundtrack guide](docs/AUDIO.md) for desktop controls, CLI batch mapping, timing semantics, and social-delivery defaults.

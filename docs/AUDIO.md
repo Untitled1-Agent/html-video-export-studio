@@ -105,7 +105,7 @@ job.render.audio = AudioConfig(
 )
 ```
 
-Before frame capture, the renderer validates the file and decodes a bounded sample of its first audio stream using FFmpeg. Missing, unsupported, corrupt, or audio-less inputs fail with a diagnostic. FFprobe is used in integration tests, not required for runtime preflight. Failed or cancelled renders retain the existing atomic-output protections.
+Before encoding video frames, the renderer validates the file and decodes a bounded sample of its first audio stream using FFmpeg. Missing, unsupported, corrupt, or audio-less inputs fail with a diagnostic. FFprobe is used in integration tests, not required for runtime preflight. Failed or cancelled renders retain the existing atomic-output protections.
 
 ## Regression coverage
 

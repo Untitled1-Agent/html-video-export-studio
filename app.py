@@ -166,8 +166,8 @@ class JobEditor(Toplevel):
         self.job = job
         self.result: Optional[JobConfig] = None
         self.title(f"Job Settings — {job.config.source.display_name}")
-        self.geometry("820x700")
-        self.minsize(740, 620)
+        self.geometry("820x740")
+        self.minsize(740, 680)
         self.transient(parent)
         self.grab_set()
 
@@ -242,6 +242,11 @@ class JobEditor(Toplevel):
         self.audio_offset_var = DoubleVar(value=config.render.audio.offset_seconds)
         self.audio_fade_in_var = DoubleVar(value=config.render.audio.fade_in_seconds)
         self.audio_fade_out_var = DoubleVar(value=config.render.audio.fade_out_seconds)
+        self.audio_bitrate_var = IntVar(value=config.render.audio.bitrate_kbps)
+        self.audio_sample_rate_var = IntVar(value=config.render.audio.sample_rate_hz)
+        self.audio_channels_var = IntVar(value=config.render.audio.channels)
+        self.audio_normalize_var = BooleanVar(value=config.render.audio.normalize_loudness)
+        self.audio_encoding_var = StringVar(value="")
         self.profile_description_var = StringVar(value="")
         self.processing_description_var = StringVar(value="")
         self.custom_processing_widgets: list[Any] = []
@@ -427,16 +432,23 @@ class JobEditor(Toplevel):
         ).grid(row=8, column=0, columnspan=3, sticky="w", pady=(16, 0))
 
     def _build_audio_tab(self, tab: ttk.Frame) -> None:
+        from models import AUDIO_BITRATES, AUDIO_SAMPLE_RATES, AUDIO_CHANNELS
         self._row(tab, 0, "Audio mode", ttk.Combobox(tab, state="readonly", values=tuple(AUDIO_LABELS), textvariable=self.audio_mode_var))
         audio_row = ttk.Frame(tab)
         audio_row.columnconfigure(0, weight=1)
         ttk.Entry(audio_row, textvariable=self.audio_path_var).grid(row=0, column=0, sticky="ew")
         ttk.Button(audio_row, text="Browse…", command=self._browse_audio).grid(row=0, column=1, padx=(6, 0))
-        self._row(tab, 1, "External audio", audio_row, "Browser audio is not recorded; an external track can be muxed and optionally looped.")
-        self._row(tab, 2, "Volume", ttk.Spinbox(tab, from_=0.0, to=4.0, increment=0.05, textvariable=self.audio_volume_var))
-        self._row(tab, 3, "Start offset (sec)", ttk.Entry(tab, textvariable=self.audio_offset_var))
-        self._row(tab, 4, "Fade in (sec)", ttk.Entry(tab, textvariable=self.audio_fade_in_var))
-        self._row(tab, 5, "Fade out (sec)", ttk.Entry(tab, textvariable=self.audio_fade_out_var))
+        self._row(tab, 1, "Matched soundtrack", audio_row, "WAV / M4A / MP3 and other audio. This track belongs only to this HTML job; browser audio is not recorded.")
+        self._row(tab, 2, "Volume (gain)", ttk.Spinbox(tab, from_=0.0, to=4.0, increment=0.05, textvariable=self.audio_volume_var), "0 = mute; 1 = original; 0.5 = half amplitude.")
+        self._row(tab, 3, "Sync offset (sec)", ttk.Spinbox(tab, from_=-86400, to=86400, increment=0.01, textvariable=self.audio_offset_var), "+ delays audio; − skips its beginning. Relative to the output video, including holds.")
+        self._row(tab, 4, "Fade in (sec)", ttk.Entry(tab, textvariable=self.audio_fade_in_var), "Starts with the audible track, after any positive delay.")
+        self._row(tab, 5, "Fade out (sec)", ttk.Entry(tab, textvariable=self.audio_fade_out_var), "Ends with the video. Short tracks are padded with silence.")
+        self.audio_bitrate_widget = ttk.Combobox(tab, state="readonly", values=AUDIO_BITRATES, textvariable=self.audio_bitrate_var)
+        self._row(tab, 6, "Bitrate (kbps)", self.audio_bitrate_widget, "0 = profile default; 96 = voice; 192 = balanced; 256 = high quality. PCM ignores bitrate.")
+        self._row(tab, 7, "Sample rate (Hz)", ttk.Combobox(tab, state="readonly", values=AUDIO_SAMPLE_RATES, textvariable=self.audio_sample_rate_var), "0 = profile default (48000). Opus requires 48000.")
+        self._row(tab, 8, "Channels", ttk.Combobox(tab, state="readonly", values=AUDIO_CHANNELS, textvariable=self.audio_channels_var), "0 = profile default; 1 = mono; 2 = stereo.")
+        ttk.Checkbutton(tab, text="Normalize loudness to −16 LUFS before gain/fades (optional)", variable=self.audio_normalize_var).grid(row=9, column=1, columnspan=2, sticky="w", padx=(12, 8), pady=5)
+        ttk.Label(tab, textvariable=self.audio_encoding_var, wraplength=620).grid(row=10, column=0, columnspan=3, sticky="w", pady=(8, 0))
 
     def _toggle_output(self) -> None:
         if not hasattr(self, "output_entry_widget"):
@@ -448,6 +460,14 @@ class JobEditor(Toplevel):
     def _update_profile_description(self) -> None:
         key = OUTPUT_PROFILE_LABEL_TO_KEY.get(self.profile_var.get())
         self.profile_description_var.set(OUTPUT_PROFILES[key].description if key else "")
+        if key and hasattr(self, "audio_encoding_var"):
+            profile = OUTPUT_PROFILES[key]
+            codec = {"aac": "AAC-LC", "libopus": "Opus", "pcm_s24le": "24-bit PCM"}.get(profile.audio_codec, profile.audio_codec)
+            self.audio_encoding_var.set(
+                f"Audio codec follows the video profile: {codec}. "
+                "Social delivery defaults to AAC-LC, 256 kbps, 48 kHz stereo in fast-start MP4. "
+                "Use Social delivery for phone/social uploads; master profiles remain specialist formats.")
+            self.audio_bitrate_widget.configure(state="disabled" if profile.audio_codec.startswith("pcm_") else "readonly")
 
     def _on_processing_change(self) -> None:
         key = PROCESSING_LABEL_TO_KEY.get(self.processing_var.get(), "custom")
@@ -501,6 +521,7 @@ class JobEditor(Toplevel):
         self.fps_var.set(fresh.render.fps)
         self.profile_var.set(OUTPUT_PROFILES[fresh.render.output_profile_key].label)
         self.processing_var.set(PROCESSING_PRESETS[fresh.render.processing.preset_key].label)
+        self._update_profile_description()
 
     @staticmethod
     def _optional_float(value: str) -> Optional[float]:
@@ -567,6 +588,13 @@ class JobEditor(Toplevel):
             config.render.audio.offset_seconds = float(self.audio_offset_var.get())
             config.render.audio.fade_in_seconds = float(self.audio_fade_in_var.get())
             config.render.audio.fade_out_seconds = float(self.audio_fade_out_var.get())
+            config.render.audio.bitrate_kbps = int(self.audio_bitrate_var.get())
+            config.render.audio.sample_rate_hz = int(self.audio_sample_rate_var.get())
+            config.render.audio.channels = int(self.audio_channels_var.get())
+            config.render.audio.normalize_loudness = bool(self.audio_normalize_var.get())
+            if config.render.audio.mode != AudioMode.NONE:
+                from media_pipeline import audio_source_path
+                config.render.audio.path = str(audio_source_path(config.render.audio.path))
 
             config.validate()
             self.result = config
@@ -753,6 +781,12 @@ class StudioApp(Tk):
         filter_entry.pack(side="left", padx=(6, 0))
         self.filter_queue_var.trace_add("write", lambda *_: self._refresh_tree())
 
+        audio_bar = ttk.Frame(tab)
+        audio_bar.pack(fill="x", pady=(0, 8))
+        ttk.Button(audio_bar, text="Attach Audio…", command=self._attach_audio).pack(side="left", padx=(0, 5))
+        ttk.Button(audio_bar, text="Match by Filename…", command=self._match_audio).pack(side="left", padx=(0, 5))
+        ttk.Button(audio_bar, text="Remove Audio", command=self._remove_audio).pack(side="left")
+
         paned = ttk.Panedwindow(tab, orient="vertical")
         paned.pack(fill="both", expand=True)
 
@@ -762,12 +796,13 @@ class StudioApp(Tk):
         paned.add(log_frame, weight=1)
 
         columns = (
-            "source", "recipe", "dimensions", "duration", "timeline",
+            "source", "audio", "recipe", "dimensions", "duration", "timeline",
             "status", "progress", "eta", "output"
         )
         self.tree = ttk.Treeview(queue_frame, columns=columns, show="headings", selectmode="extended")
         headings = {
             "source": "Source",
+            "audio": "Soundtrack",
             "recipe": "Recipe",
             "dimensions": "Output",
             "duration": "Duration",
@@ -778,7 +813,7 @@ class StudioApp(Tk):
             "output": "Output file",
         }
         widths = {
-            "source": 260, "recipe": 145, "dimensions": 115, "duration": 72,
+            "source": 260, "audio": 230, "recipe": 145, "dimensions": 115, "duration": 72,
             "timeline": 120, "status": 90, "progress": 76, "eta": 62, "output": 290,
         }
         for column in columns:
@@ -1022,7 +1057,7 @@ class StudioApp(Tk):
         for index, job in enumerate(self.jobs):
             source_text = job.config.source.display_name
             haystack = " ".join(
-                [source_text, job.status.value, job.phase, job.config.recipe_key, job.output_path]
+                [source_text, job.config.render.audio.path, job.status.value, job.phase, job.config.recipe_key, job.output_path]
             ).lower()
             if query_text and query_text not in haystack:
                 if self.tree.exists(job.job_id):
@@ -1038,8 +1073,12 @@ class StudioApp(Tk):
             )
             timeline = probe.timeline_mode.value if probe else job.config.timeline.mode.value
             recipe = RECIPES.get(job.config.recipe_key)
+            audio = job.config.render.audio
+            soundtrack = (f"{Path(audio.path).name} · {audio.mode.value} · {audio.offset_seconds:+.3f}s"
+                          if audio.mode != AudioMode.NONE else "No audio")
             values = (
                 source_text,
+                soundtrack,
                 recipe.label if recipe else job.config.recipe_key,
                 dimensions,
                 duration,
@@ -1068,6 +1107,87 @@ class StudioApp(Tk):
             if self.tree.exists(iid):
                 self.tree.selection_add(iid)
         self._update_queue_summary()
+
+    def _editable_audio_jobs(self, *, single: bool = False) -> list[QueueJob]:
+        jobs = self._selected_jobs()
+        if not jobs or (single and len(jobs) != 1):
+            messagebox.showinfo("Select jobs", "Select exactly one HTML job to attach a soundtrack." if single else "Select one or more HTML jobs.", parent=self)
+            return []
+        if self.update_in_progress or any(self._is_busy(job) for job in jobs):
+            messagebox.showinfo("Jobs are busy", "Finish or stop the queue/analysis before changing soundtracks.", parent=self)
+            return []
+        return jobs
+
+    def _set_job_audio(self, job: QueueJob, path: Optional[Path]) -> None:
+        job.config.render.audio.path = str(path) if path else ""
+        if path and job.config.render.audio.mode == AudioMode.NONE:
+            job.config.render.audio.mode = AudioMode.TRIM
+        if path is None:
+            job.config.render.audio.mode = AudioMode.NONE
+        job.status = JobStatus.QUEUED
+        job.progress = 0.0
+        job.phase = "Queued"
+        job.probe = None
+        job.error = ""
+        job.output_path = ""
+        job.elapsed_seconds = 0.0
+        job.eta_seconds = None
+        self.project_dirty = True
+
+    def _attach_audio(self) -> None:
+        jobs = self._editable_audio_jobs(single=True)
+        if not jobs:
+            return
+        path = filedialog.askopenfilename(parent=self, title=f"Soundtrack for {jobs[0].config.source.display_name}",
+            filetypes=[("Audio files", "*.wav *.m4a *.mp3 *.WAV *.M4A *.MP3 *.aac *.flac *.ogg *.opus"), ("All files", "*.*")])
+        if not path or self._is_busy(jobs[0]) or self.update_in_progress:
+            return
+        from media_pipeline import audio_source_path
+        try:
+            resolved = audio_source_path(path)
+        except ValueError as exc:
+            messagebox.showerror("Invalid audio", str(exc), parent=self)
+            return
+        self._set_job_audio(jobs[0], resolved)
+        self._refresh_tree()
+        self._update_inspector()
+
+    def _match_audio(self) -> None:
+        jobs = self._editable_audio_jobs()
+        if not jobs:
+            return
+        paths = filedialog.askopenfilenames(parent=self, title="Match soundtracks by HTML filename",
+            filetypes=[("Audio files", "*.wav *.m4a *.mp3 *.WAV *.M4A *.MP3 *.aac *.flac *.ogg *.opus"), ("All files", "*.*")])
+        if not paths or any(self._is_busy(job) for job in jobs) or self.update_in_progress:
+            return
+        from media_pipeline import find_matching_audio
+        matched = 0
+        notes = []
+        for job in jobs:
+            if job.config.render.audio.path.strip():
+                notes.append(f"Kept existing soundtrack: {job.config.source.display_name}")
+                continue
+            try:
+                path = find_matching_audio(job.config.source, [Path(p) for p in paths])
+            except ValueError as exc:
+                notes.append(str(exc))
+                continue
+            if path is None:
+                notes.append(f"No filename match: {job.config.source.display_name}")
+                continue
+            self._set_job_audio(job, path)
+            matched += 1
+        self._refresh_tree()
+        self._update_inspector()
+        messagebox.showinfo("Audio matching", f"Matched {matched} soundtrack(s)." + ("\n\n" + "\n".join(notes) if notes else ""), parent=self)
+
+    def _remove_audio(self) -> None:
+        jobs = self._editable_audio_jobs()
+        for job in jobs:
+            self._set_job_audio(job, None)
+        if jobs:
+            self._refresh_tree()
+            self._update_inspector()
 
     def _edit_selected(self) -> None:
         jobs = self._selected_jobs()
