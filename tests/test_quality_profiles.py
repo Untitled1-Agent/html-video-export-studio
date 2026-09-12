@@ -20,8 +20,8 @@ class QualityProfileTests(unittest.TestCase):
         self.assertEqual(option(profile.video_args, "-pix_fmt"), "yuv420p")
         self.assertEqual(option(profile.video_args, "-profile:v"), "main")
         self.assertEqual(option(profile.video_args, "-tag:v"), "avc1")
-        self.assertEqual(option(profile.video_args, "-maxrate"), "20M")
-        self.assertEqual(option(profile.video_args, "-bufsize"), "40M")
+        self.assertEqual(option(profile.video_args, "-maxrate"), "30M")
+        self.assertEqual(option(profile.video_args, "-bufsize"), "60M")
         self.assertEqual(RECIPES["social_delivery"].output_profile_key, "h264_420_mp4")
 
     def test_hevc_is_opt_in_high_efficiency_profile(self):
@@ -33,8 +33,8 @@ class QualityProfileTests(unittest.TestCase):
         self.assertEqual(option(profile.video_args, "-pix_fmt"), "yuv420p")
         self.assertEqual(option(profile.video_args, "-profile:v"), "main")
         self.assertEqual(option(profile.video_args, "-tag:v"), "hvc1")
-        self.assertEqual(option(profile.video_args, "-maxrate"), "20M")
-        self.assertEqual(option(profile.video_args, "-bufsize"), "40M")
+        self.assertEqual(option(profile.video_args, "-maxrate"), "30M")
+        self.assertEqual(option(profile.video_args, "-bufsize"), "60M")
         self.assertEqual(profile.audio_codec, "aac")
         self.assertIn("aac_low", profile.audio_args)
 
