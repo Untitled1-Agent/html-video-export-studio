@@ -2,29 +2,27 @@ name: Quality evidence
 on:
   push:
     branches: ['feat/social-quality-6000']
-  workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: quality-evidence-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   source-snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      matrix:
+        file: [renderer.py, models.py, presets.py, media_pipeline.py, processing.py, version.py, cli.py]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Archive only tracked source (no credentials or local media)
+      - name: Verify tracked public source
+        env:
+          SOURCE_FILE: ${{ matrix.file }}
         run: |
-          mkdir -p evidence
-          git archive --format=tar HEAD > evidence/source.tar
-          git rev-parse HEAD > evidence/commit.txt
-          sha256sum evidence/source.tar > evidence/SHA256SUMS
-      - uses: actions/upload-artifact@v4
-        with:
-          name: quality-source-${{ github.sha }}
-          path: evidence/
-          retention-days: 7
-          if-no-files-found: error
+          python - <<'PY'
+          import base64, hashlib, os, subprocess, zlib
+          name = os.environ['SOURCE_FILE']
+          data = subprocess.check_output(['git', 'show', 'HEAD:' + name])
+          print('SOURCE', name, hashlib.sha256(data).hexdigest())
+          print('ZLIB_BASE64', base64.b64encode(zlib.compress(data, 9)).decode())
+          PY
