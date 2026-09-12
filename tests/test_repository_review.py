@@ -6,6 +6,7 @@ import json
 import tempfile
 import subprocess
 import unittest
+import wave
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -50,7 +51,13 @@ class RepositoryCoreTests(unittest.TestCase):
 
     def test_audio_preflight_checks_actual_audio_filters(self):
         with tempfile.TemporaryDirectory() as td:
-            audio = Path(td)/'tone.wav'; audio.write_bytes(b'placeholder')
+            audio = Path(td) / 'tone.wav'
+            # Preflight now verifies decodability, not just the file's existence.
+            with wave.open(str(audio), 'wb') as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(48000)
+                output.writeframes(b'\x00\x00' * 4800)
             job = RECIPES['exact_source_master'].create_job('a.html')
             job.render.audio.path = str(audio); job.render.audio.mode = AudioMode.TRIM
             job.render.audio.offset_seconds = 0.2; job.render.audio.fade_in_seconds = 0.1

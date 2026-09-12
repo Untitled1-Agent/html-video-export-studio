@@ -453,4 +453,6 @@ def apply_recipe(job: JobConfig, recipe_key: str) -> JobConfig:
     fresh.render.capture_workers = job.render.capture_workers
     fresh.render.frame_buffer_mb = job.render.frame_buffer_mb
     fresh.render.fast_capture = job.render.fast_capture
+    import copy
+    fresh.render.audio = copy.deepcopy(job.render.audio)
     return fresh

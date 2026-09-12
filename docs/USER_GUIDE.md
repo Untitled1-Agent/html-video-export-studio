@@ -55,3 +55,7 @@ Browser/system audio is not captured. In Job Settings choose an external file an
 ## Checking results
 
 Inspect the first and last frames and each scene transition. Compare size/rate/frame count with the inspector. A limited player may refuse or poorly scale lossless RGB MP4; export H.264 4:2:0 for compatibility without treating that copy as the pixel reference. Social platforms may transcode uploads. Preserve the original HTML, exact-source master, job project, app version, browser version and FFmpeg version for reproducible work.
+
+## External soundtracks
+
+Match WAV/M4A/MP3 files to individual HTML jobs, use signed audio sync, and adjust gain, looping, fades, encoding quality, or optional normalization. See the [soundtrack guide](AUDIO.md) for desktop controls, CLI batch mapping, timing semantics, and social-delivery defaults.

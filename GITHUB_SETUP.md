@@ -6,7 +6,7 @@
 
 A connected read/search integration does not automatically provide a terminal with GitHub CLI credentials or repository-creation operations. The helper here uses **your local GitHub CLI login**, not an exported connector token. No remote repository is created by extracting the ZIP or running `--dry-run`.
 
-The intended default name is `html-video-export-studio`; initial visibility is **private**. The owner/name can be supplied explicitly. This package has no selected project license; choose one and review the source before making it public.
+The intended default name is `html-video-export-studio`; initial visibility is **private**. The owner/name can be supplied explicitly. Project license: **MIT** (see LICENSE).
 
 ## Install GitHub CLI and Git
 

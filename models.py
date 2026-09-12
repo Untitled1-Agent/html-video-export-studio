@@ -16,6 +16,9 @@ DEFAULT_RECIPE_KEY = "social_delivery"
 DEFAULT_SHARPEN_STRENGTH = 0.28
 MAX_CPU_THREADS = 256
 MAX_CAPTURE_WORKERS = 16
+AUDIO_BITRATES = (0, 64, 96, 128, 160, 192, 256)
+AUDIO_SAMPLE_RATES = (0, 44100, 48000)
+AUDIO_CHANNELS = (0, 1, 2)
 
 
 def strict_int(value: Any) -> int:
@@ -225,20 +228,34 @@ class AudioConfig:
     offset_seconds: float = 0.0
     fade_in_seconds: float = 0.0
     fade_out_seconds: float = 0.0
+    bitrate_kbps: int = 0  # 0: output-profile default; PCM ignores bitrate.
+    sample_rate_hz: int = 0  # 0: output-profile default (48 kHz).
+    channels: int = 0  # 0: output-profile default (stereo).
+    normalize_loudness: bool = False
 
     def validate(self) -> None:
+        if not isinstance(self.mode, AudioMode):
+            raise ValueError("Invalid audio mode.")
+        if not isinstance(self.path, str):
+            raise ValueError("Audio path must be a string.")
         if self.mode != AudioMode.NONE and not self.path.strip():
             raise ValueError("Choose an audio file or disable audio.")
-        if self.volume < 0 or not math.isfinite(self.volume):
+        if strict_float(self.volume) < 0:
             raise ValueError("Audio volume must be a finite non-negative number.")
-        for label, value in (
-            ("Audio offset", self.offset_seconds),
-            ("Audio fade-in", self.fade_in_seconds),
-            ("Audio fade-out", self.fade_out_seconds),
+        if not -86400 <= strict_float(self.offset_seconds) <= 86400:
+            raise ValueError("Audio offset must be between -86400 and +86400 seconds.")
+        for label, value in (("Audio fade-in", self.fade_in_seconds),
+                             ("Audio fade-out", self.fade_out_seconds)):
+            if not 0 <= strict_float(value) <= 86400:
+                raise ValueError(f"{label} must be between 0 and 86400 seconds.")
+        for label, value, choices in (
+            ("Audio bitrate", self.bitrate_kbps, AUDIO_BITRATES),
+            ("Audio sample rate", self.sample_rate_hz, AUDIO_SAMPLE_RATES),
+            ("Audio channels", self.channels, AUDIO_CHANNELS),
         ):
-            if value < 0 or not math.isfinite(value):
-                raise ValueError(f"{label} must be a finite non-negative number.")
-
+            if strict_int(value) not in choices:
+                raise ValueError(f"{label} must be one of {choices}; 0 uses the profile default.")
+        strict_bool(self.normalize_loudness)
 
 @dataclass
 class RenderConfig:
@@ -277,6 +294,10 @@ class RenderConfig:
             raise ValueError("FPS must be between 1 and 240.")
         self.processing.validate()
         self.audio.validate()
+        if (self.audio.mode != AudioMode.NONE
+                and OUTPUT_PROFILES[self.output_profile_key].audio_codec == "libopus"
+                and int(self.audio.sample_rate_hz) == 44100):
+            raise ValueError("WebM/Opus requires 48000 Hz; choose Profile default or 48000 Hz.")
         if for_export and not self.save_next_to_source and not self.output_directory.strip():
             raise ValueError("Choose an output directory.")
         fields = {'stem','ext','scale','fps','profile','processing'}
@@ -422,6 +443,10 @@ def audio_from_dict(data: dict[str, Any]) -> AudioConfig:
         offset_seconds=strict_float(data.get("offset_seconds", base.offset_seconds)),
         fade_in_seconds=strict_float(data.get("fade_in_seconds", base.fade_in_seconds)),
         fade_out_seconds=strict_float(data.get("fade_out_seconds", base.fade_out_seconds)),
+        bitrate_kbps=strict_int(data.get("bitrate_kbps", base.bitrate_kbps)),
+        sample_rate_hz=strict_int(data.get("sample_rate_hz", base.sample_rate_hz)),
+        channels=strict_int(data.get("channels", base.channels)),
+        normalize_loudness=strict_bool(data.get("normalize_loudness", base.normalize_loudness)),
     )
 
 
