@@ -152,3 +152,4 @@ Only render HTML/URLs you trust. Pages execute JavaScript and can access the net
 ## External soundtracks
 
 Match WAV/M4A/MP3 files to individual HTML jobs, use signed audio sync, and adjust gain, looping, fades, encoding quality, or optional normalization. See the [soundtrack guide](docs/AUDIO.md) for desktop controls, CLI batch mapping, timing semantics, and social-delivery defaults.
+**Licensed under the [MIT License](LICENSE).** Review [NOTICE.md](NOTICE.md) for third-party component notes, and [SECURITY.md](SECURITY.md) for handling sensitive reports.
