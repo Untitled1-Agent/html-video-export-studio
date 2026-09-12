@@ -14,6 +14,25 @@ consistent with reports of VLC artifacts, Android colour distortion and TikTok
 rejection. Without the original failing movie and device, it is not proof of
 the exact cause of a particular failure or of damaged encoded bytes.
 
+## Reproduced mid-video colour conversion problem
+
+The new regression exposed a second problem on the Linux CI runner's FFmpeg
+6.1: after an RGB-to-RGBA PNG transition, a magenta swatch decoded as
+`(255, 37, 255)` instead of `(255, 0, 255)`. The same test passed on FFmpeg 7.
+This is encoded colour drift, not just a player-display difference.
+
+FFmpeg 6.1 can insert an implicit output scaler after the filter graph is
+reinitialized, once output dimensions are known. That scaler can take over
+RGB-to-YUV conversion using its default matrix instead of the explicit BT.709
+conversion. All export profiles now disable output autoscaling with
+`-noautoscale`. The renderer already validates fixed capture dimensions; there
+is no legitimate need to silently resize later frames. Graph reinitialization
+remains enabled and frames are not dropped to conceal format changes.
+
+The 240-frame decoded-colour regression keeps the RGB-to-RGBA transition and
+checks every frame. A separate command-builder test guards the output option
+for every profile, including archival and alpha-capable outputs.
+
 ## New default: Social delivery
 
 New desktop, CLI and Python API jobs use **Social delivery — Sharp compatible
@@ -75,6 +94,7 @@ Run the regressions with FFmpeg, ffprobe and the application dependencies:
 
 ```bash
 python -m unittest discover -s tests -p test_delivery_compatibility.py -v
+python -m unittest discover -s tests -p test_output_autoscale.py -v
 ```
 
 They encode and fully decode 240 frames across changing colours, an RGB-to-RGBA
@@ -87,3 +107,5 @@ Primary references:
 - [Android supported media formats](https://developer.android.com/media/platform/supported-formats)
 - [TikTok media transfer requirements](https://developers.tiktok.com/docs/en/content-posting-api-media-transfer-guide)
 - [FFmpeg filter documentation](https://ffmpeg.org/ffmpeg-filters.html)
+- [FFmpeg output autoscaling](https://ffmpeg.org/ffmpeg.html)
+- [FFmpeg 6.1 output filter configuration](https://github.com/FFmpeg/FFmpeg/blob/n6.1.1/fftools/ffmpeg_filter.c)

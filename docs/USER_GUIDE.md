@@ -6,7 +6,7 @@
 
 For authored motion graphics, use **Exact source master** as the baseline: 2× browser rasterization, 60 fps, lossless RGB, No processing. For a browser/player-friendly copy choose Social delivery, then inspect its default sharpening and chroma tradeoff. For transparency choose ProRes 4444, transparent capture, and No processing. For a webpage with no natural endpoint explicitly choose a duration and a suitable timing adapter.
 
-Recipes are starting configurations, not automatic fixes for incompatible HTML. The [generated configuration reference](CONFIGURATION.md) lists their exact keys and defaults. The new-job default is Motion graphics master, which uses optional automatic processing; it is not the unfiltered reference recipe.
+Recipes are starting configurations, not automatic fixes for incompatible HTML. The [generated configuration reference](CONFIGURATION.md) lists their exact keys and defaults. The new-job default is **Social delivery — Sharp compatible MP4 (default)**: 1× / 60 fps H.264 Main 4:2:0 with explicit CAS 0.28 sharpening. Exact source master remains an opt-in unfiltered reference recipe. See [delivery compatibility](DELIVERY_COMPATIBILITY.md) for VLC/Android/TikTok guidance, the one-time legacy-default migration, and how to re-render existing jobs without resetting their timing settings.
 
 ## Sources and inspection
 
@@ -42,7 +42,7 @@ Pause is checked between frames. Cancel Selected sets a per-job signal, includin
 
 ## Files and projects
 
-Default naming includes stem, scale, fps, profile, and resolved processing preset. Template fields are `{stem}`, `{scale}`, `{fps}`, `{profile}`, `{processing}`, and `{ext}`. Stem and extension are mandatory; nested fields, format specifications, path characters, Windows reserved device names, and overlong filenames are rejected. The default example shape is `animation_2x_60fps_lossless_rgb_no_processing.mp4`.
+Default naming includes stem, scale, fps, profile, and resolved processing preset. Template fields are `{stem}`, `{scale}`, `{fps}`, `{profile}`, `{processing}`, and `{ext}`. Stem and extension are mandatory; nested fields, format specifications, path characters, Windows reserved device names, and overlong filenames are rejected. A default delivery example is `animation_1x_60fps_h264_420_social_compensation.mp4`.
 
 Outputs are encoded into same-folder temporary files and committed only after success. No-overwrite publication uses atomic non-replacing operations; POSIX needs a filesystem that supports hard links. Use a local filesystem if a network/FAT volume cannot provide that guarantee. Overwrite is explicit, not a workaround to enable on valuable destinations. An export may not use its external soundtrack as the output path.
 
