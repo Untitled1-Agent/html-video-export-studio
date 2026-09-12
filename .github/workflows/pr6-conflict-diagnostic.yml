@@ -1,4 +1,4 @@
-name: PR 6 conflict diagnostic
+name: Resolve PR 6 conflicts
 
 on:
   push:
@@ -7,33 +7,115 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  resolve:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Show exact merge conflicts
+      - name: Merge main and resolve additive conflicts
         shell: bash
         run: |
-          set +e
-          git config user.name "PR 6 conflict diagnostic"
+          set -euo pipefail
+          git config user.name "PR 6 conflict resolver"
           git config user.email "actions@users.noreply.github.com"
+          git config merge.conflictstyle diff3
           git fetch origin main
+
+          set +e
           git merge --no-commit --no-ff origin/main
           merge_status=$?
-          echo "MERGE_STATUS=$merge_status"
-          echo "CONFLICTED_FILES_BEGIN"
-          git diff --name-only --diff-filter=U
-          echo "CONFLICTED_FILES_END"
-          while IFS= read -r file; do
-            [ -n "$file" ] || continue
-            echo "===== CONFLICT: $file ====="
-            git checkout --conflict=diff3 -- "$file"
-            cat "$file"
-            echo "===== END CONFLICT: $file ====="
-          done < <(git diff --name-only --diff-filter=U)
-          exit 1
+          set -e
+
+          if [ "$merge_status" -eq 0 ]; then
+            echo "main merged without conflicts"
+          else
+            python - <<'PY'
+          from pathlib import Path
+
+          expected = {"README.md", "media_pipeline.py", "models.py", "presets.py"}
+
+          import subprocess
+          actual = {
+              line for line in subprocess.check_output(
+                  ["git", "diff", "--name-only", "--diff-filter=U"], text=True
+              ).splitlines() if line
+          }
+          if actual != expected:
+              raise SystemExit(f"Unexpected conflict set: {sorted(actual)}; expected {sorted(expected)}")
+
+          def union_diff3(path: Path) -> None:
+              lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+              out: list[str] = []
+              i = 0
+              conflicts = 0
+              while i < len(lines):
+                  if not lines[i].startswith("<<<<<<< "):
+                      out.append(lines[i])
+                      i += 1
+                      continue
+                  conflicts += 1
+                  i += 1
+                  ours: list[str] = []
+                  while i < len(lines) and not (lines[i].startswith("||||||| ") or lines[i].startswith("=======")):
+                      ours.append(lines[i])
+                      i += 1
+                  if i >= len(lines):
+                      raise SystemExit(f"Malformed conflict in {path}")
+                  if lines[i].startswith("||||||| "):
+                      i += 1
+                      while i < len(lines) and not lines[i].startswith("======="):
+                          i += 1
+                  if i >= len(lines) or not lines[i].startswith("======="):
+                      raise SystemExit(f"Malformed diff3 separator in {path}")
+                  i += 1
+                  theirs: list[str] = []
+                  while i < len(lines) and not lines[i].startswith(">>>>>>> "):
+                      theirs.append(lines[i])
+                      i += 1
+                  if i >= len(lines):
+                      raise SystemExit(f"Malformed conflict end in {path}")
+                  i += 1
+                  out.extend(ours)
+                  out.extend(theirs)
+              if conflicts == 0:
+                  raise SystemExit(f"Expected conflict markers in {path}")
+              path.write_text("".join(out), encoding="utf-8")
+
+          for name in sorted(expected):
+              union_diff3(Path(name))
+
+          readme = Path("README.md")
+          text = readme.read_text(encoding="utf-8")
+          obsolete = (
+              "**A project license has not been selected.** This package does not silently assign an open-source "
+              "license on the owner's behalf. Review [NOTICE.md](NOTICE.md) before public distribution, and "
+              "[SECURITY.md](SECURITY.md) for handling sensitive reports.\n"
+          )
+          if obsolete not in text:
+              raise SystemExit("Expected obsolete pre-MIT README notice was not found")
+          text = text.replace(obsolete, "", 1)
+          readme.write_text(text, encoding="utf-8")
+          PY
+          fi
+
+          git add README.md media_pipeline.py models.py presets.py
+          unresolved="$(git diff --name-only --diff-filter=U)"
+          if [ -n "$unresolved" ]; then
+            echo "Unresolved files remain:"
+            echo "$unresolved"
+            exit 1
+          fi
+
+          git diff --check
+          python -m compileall -q app.py cli.py media_pipeline.py models.py presets.py renderer.py
+
+          # The resolver is temporary and must not remain in the PR diff.
+          git rm .github/workflows/pr6-conflict-diagnostic.yml
+          git add -A
+          git status --short
+          git commit -m "Merge main and resolve PR 6 conflicts"
+          git push origin HEAD:perf/single-video-parallel-capture
