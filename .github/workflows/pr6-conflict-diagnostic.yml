@@ -1,0 +1,39 @@
+name: PR 6 conflict diagnostic
+
+on:
+  push:
+    branches:
+      - perf/single-video-parallel-capture
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Show exact merge conflicts
+        shell: bash
+        run: |
+          set +e
+          git config user.name "PR 6 conflict diagnostic"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          echo "MERGE_STATUS=$merge_status"
+          echo "CONFLICTED_FILES_BEGIN"
+          git diff --name-only --diff-filter=U
+          echo "CONFLICTED_FILES_END"
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            echo "===== CONFLICT: $file ====="
+            git checkout --conflict=diff3 -- "$file"
+            cat "$file"
+            echo "===== END CONFLICT: $file ====="
+          done < <(git diff --name-only --diff-filter=U)
+          exit 1
