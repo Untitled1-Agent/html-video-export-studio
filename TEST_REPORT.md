@@ -51,7 +51,7 @@ Tests ran on **Linux, Python 3.13.5, Playwright 1.57.0, Pillow 12.3.0, imageio-f
 - Ruff, Mypy, Bandit, ShellCheck, external URL/Markdown-anchor checking, and cryptographic publisher-signature verification were not performed. The stated shell check is `bash -n` only.
 - Checksums are integrity checks, not release signatures. No blanket safety guarantee is made for hostile HTML, arbitrary asynchronous websites, power failure, network filesystems, every GPU/player, HDR, DRM, or mixed animation clocks.
 
-Remaining product limits are tracked in [known issues](docs/KNOWN_ISSUES.md), not described as fixed hosted tickets. A project license is still an explicit owner decision.
+Remaining product limits are tracked in [known issues](docs/KNOWN_ISSUES.md), not described as fixed hosted tickets. The project is licensed under the MIT License (LICENSE).
 
 ## Reproduce
 

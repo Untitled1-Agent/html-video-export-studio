@@ -7,6 +7,8 @@ name = "html-video-export-studio"
 version = "1.5.2"
 description = "Desktop and CLI suite for source-controlled HTML-to-video export"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE.md"]
 requires-python = ">=3.10"
 dependencies = ["playwright>=1.45,<2", "imageio-ffmpeg>=0.5,<1", "Pillow>=10,<13"]
 
