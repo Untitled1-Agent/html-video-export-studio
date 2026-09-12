@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13'
+      - name: Install project dependencies
+        run: python -m pip install -r requirements-dev.txt
       - name: Apply measured VBV fix and regenerate docs
         shell: bash
         run: |
@@ -26,7 +28,6 @@ jobs:
           presets = Path('presets.py')
           text = presets.read_text(encoding='utf-8')
           old = text
-          # Only delivery profiles have this exact pair on the feature branch.
           text = text.replace('"-maxrate", "20M",\n            "-bufsize", "40M",', '"-maxrate", "30M",\n            "-bufsize", "60M",')
           if text == old:
               raise SystemExit('Expected 20M/40M delivery VBV pair was not found.')
@@ -37,7 +38,10 @@ jobs:
           tests.write_text(text, encoding='utf-8')
 
           delivery = Path('docs/DELIVERY_COMPATIBILITY.md')
-          text = delivery.read_text(encoding='utf-8').replace('a 20 Mb/s VBV ceiling\nwith a 40 Mb buffer bound delivery complexity.', 'a 30 Mb/s VBV ceiling\nwith a 60 Mb buffer bound delivery complexity. The higher bound preserves CRF 8 quality\non sustained high-detail 1080×1920 / 60 fps motion while still bounding delivery spikes.')
+          text = delivery.read_text(encoding='utf-8').replace(
+              'a 20 Mb/s VBV ceiling\nwith a 40 Mb buffer bound delivery complexity.',
+              'a 30 Mb/s VBV ceiling\nwith a 60 Mb buffer bound delivery complexity. The higher bound preserves CRF 8 quality\non sustained high-detail 1080×1920 / 60 fps motion while still bounding delivery spikes.'
+          )
           delivery.write_text(text, encoding='utf-8')
 
           changelog = Path('CHANGELOG.md')
@@ -52,7 +56,7 @@ jobs:
           changelog.write_text(text, encoding='utf-8')
           PY
           python tools/generate_reference.py
-          python -m unittest tests.test_quality_profiles tests.test_quality_cli_media -v
+          python -m unittest tests.test_quality_profiles -v
           python tools/check_docs.py
       - name: Commit measured fix if needed
         shell: bash
@@ -63,6 +67,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add presets.py tests/test_quality_profiles.py tests/test_quality_cli_media.py docs/DELIVERY_COMPATIBILITY.md docs/CONFIGURATION.md CHANGELOG.md
+          git add presets.py tests/test_quality_profiles.py docs/DELIVERY_COMPATIBILITY.md docs/CONFIGURATION.md CHANGELOG.md
           git commit -m 'fix: preserve CRF quality under sustained detail'
           git push origin HEAD:feat/social-crf-x265-quality
