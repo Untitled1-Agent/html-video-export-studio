@@ -15,6 +15,7 @@ from typing import Any, Optional
 DEFAULT_RECIPE_KEY = "social_delivery"
 DEFAULT_SHARPEN_STRENGTH = 0.28
 MAX_CPU_THREADS = 256
+MAX_CAPTURE_WORKERS = 16
 AUDIO_BITRATES = (0, 64, 96, 128, 160, 192, 256)
 AUDIO_SAMPLE_RATES = (0, 44100, 48000)
 AUDIO_CHANNELS = (0, 1, 2)
@@ -268,6 +269,9 @@ class RenderConfig:
     save_next_to_source: bool = True
     filename_template: str = "{stem}_{scale}x_{fps}fps_{profile}_{processing}.{ext}"
     cpu_threads: int = 0  # 0: automatic; otherwise encoder threads per export.
+    capture_workers: int = 0  # Auto requires an author-declared parallel-safe source.
+    frame_buffer_mb: int = 256  # Buffered PNG payload budget, not total browser RAM.
+    fast_capture: bool = True
 
     def validate(self, for_export: bool = True) -> None:
         from presets import OUTPUT_PROFILES, PROCESSING_PRESETS
@@ -276,6 +280,11 @@ class RenderConfig:
         if self.processing.preset_key not in PROCESSING_PRESETS:
             raise ValueError('Unknown processing preset: ' + self.processing.preset_key)
         strict_int(self.fps)
+        if not 0 <= strict_int(self.capture_workers) <= MAX_CAPTURE_WORKERS:
+            raise ValueError(f"Capture workers must be between 0 (automatic) and {MAX_CAPTURE_WORKERS}.")
+        if not 16 <= strict_int(self.frame_buffer_mb) <= 4096:
+            raise ValueError("Frame buffer must be between 16 and 4096 MiB.")
+        strict_bool(self.fast_capture)
         if not 0 <= strict_int(self.cpu_threads) <= MAX_CPU_THREADS:
             raise ValueError(f"CPU threads must be between 0 (automatic) and {MAX_CPU_THREADS}.")
         if isinstance(self.scale, bool): raise ValueError('Scale must be a number, not a boolean.')
@@ -514,6 +523,9 @@ def job_config_from_dict(data: dict[str, Any]) -> JobConfig:
         scale=strict_float(render_data.get("scale", render_base.scale)),
         fps=strict_int(render_data.get("fps", render_base.fps)),
         cpu_threads=strict_int(render_data.get("cpu_threads", render_base.cpu_threads)),
+        capture_workers=strict_int(render_data.get("capture_workers", render_base.capture_workers)),
+        frame_buffer_mb=strict_int(render_data.get("frame_buffer_mb", render_base.frame_buffer_mb)),
+        fast_capture=strict_bool(render_data.get("fast_capture", render_base.fast_capture)),
         output_profile_key=str(
             render_data.get("output_profile_key", render_base.output_profile_key)
         ),

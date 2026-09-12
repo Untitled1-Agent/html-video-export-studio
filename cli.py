@@ -8,6 +8,7 @@ from pathlib import Path
 from models import (
     DEFAULT_RECIPE_KEY,
     MAX_CPU_THREADS,
+    MAX_CAPTURE_WORKERS,
     CaptureMode,
     GeometryMode,
     LoadStrategy,
@@ -29,6 +30,23 @@ def _cpu_threads(value: str) -> int:
     return count
 
 
+def _capture_workers(value: str) -> int:
+    count = _cpu_threads(value)
+    if count > MAX_CAPTURE_WORKERS:
+        raise argparse.ArgumentTypeError(f"Capture workers must be between 0 and {MAX_CAPTURE_WORKERS}.")
+    return count
+
+
+def _frame_buffer(value: str) -> int:
+    try:
+        size = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Frame buffer must be an integer MiB value.") from exc
+    if not 16 <= size <= 4096:
+        raise argparse.ArgumentTypeError("Frame buffer must be between 16 and 4096 MiB.")
+    return size
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="html-video-export",
@@ -45,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fps", type=int)
     parser.add_argument("--cpu-threads", type=_cpu_threads, default=0, metavar="N",
                         help="Encoder threads per export; 0 selects a CPU-aware budget (default).")
+    parser.add_argument("--capture-workers", type=_capture_workers, default=0, metavar="N",
+                        help="Browser lanes: 0=auto for declared-safe sources; 1=sequential; 2+ asserts independent seeking.")
+    parser.add_argument("--frame-buffer-mb", type=_frame_buffer, default=256, metavar="MIB",
+                        help="PNG buffer budget; browser and encoder memory are additional (default: 256).")
+    parser.add_argument("--no-fast-capture", action="store_true",
+                        help="Use legacy element screenshot waits instead of the guarded viewport fast path.")
     parser.add_argument("--profile", choices=OUTPUT_PROFILES)
     parser.add_argument("--processing", choices=PROCESSING_PRESETS)
     parser.add_argument("--capture", choices=[item.value for item in CaptureMode])
@@ -140,6 +164,9 @@ def make_job(source: str, args: argparse.Namespace):
     value = source if kind == SourceKind.URL else str(Path(source).expanduser().resolve())
     job = RECIPES[args.recipe].create_job(value, kind)
     job.render.cpu_threads = args.cpu_threads
+    job.render.capture_workers = args.capture_workers
+    job.render.frame_buffer_mb = args.frame_buffer_mb
+    job.render.fast_capture = not args.no_fast_capture
     if args.scale is not None:
         job.render.scale = args.scale
     if args.fps is not None:

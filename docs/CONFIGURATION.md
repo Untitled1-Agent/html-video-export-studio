@@ -57,6 +57,9 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 | `save_next_to_source` | `bool` | `true` |
 | `filename_template` | `str` | `"{stem}_{scale}x_{fps}fps_{profile}_{processing}.{ext}"` |
 | `cpu_threads` | `int` | `0` |
+| `capture_workers` | `int` | `0` |
+| `frame_buffer_mb` | `int` | `256` |
+| `fast_capture` | `bool` | `true` |
 
 ## ProcessingConfig
 
@@ -230,7 +233,8 @@ Audio arguments:
 usage: html-video-export [-h]
                          [--recipe {motion_graphics_master,exact_source_master,editing_master,social_delivery,web_animation,video_element,static_page_hold,website_capture}]
                          [--probe] [--deep-analysis] [--output OUTPUT] [--scale SCALE]
-                         [--fps FPS] [--cpu-threads N]
+                         [--fps FPS] [--cpu-threads N] [--capture-workers N]
+                         [--frame-buffer-mb MIB] [--no-fast-capture]
                          [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,vp9_webm}]
                          [--processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}]
                          [--capture {auto,marker,selector,viewport,full_page}]
@@ -268,6 +272,13 @@ options:
   --fps FPS
   --cpu-threads N       Encoder threads per export; 0 selects a CPU-aware budget
                         (default).
+  --capture-workers N   Browser lanes: 0=auto for declared-safe sources; 1=sequential;
+                        2+ asserts independent seeking.
+  --frame-buffer-mb MIB
+                        PNG buffer budget; browser and encoder memory are additional
+                        (default: 256).
+  --no-fast-capture     Use legacy element screenshot waits instead of the guarded
+                        viewport fast path.
   --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,vp9_webm}
   --processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}
   --capture {auto,marker,selector,viewport,full_page}

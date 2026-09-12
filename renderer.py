@@ -17,6 +17,7 @@ import threading
 import time
 import urllib.parse
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -334,6 +335,67 @@ class _StderrCollector:
     def finish(self) -> str:
         self.thread.join(timeout=5)
         return b"".join(self.parts).decode("utf-8", errors="replace").strip()
+
+
+class _CaptureCancel:
+    def __init__(self, stop, user):
+        self.stop, self.user = stop, user
+
+    def is_set(self):
+        return self.stop.is_set() or (self.user is not None and self.user.is_set())
+
+
+def _capture_signature(prepared):
+    # Plain immutable metadata only: never share Page/Locator objects.
+    return (prepared.source_width, prepared.source_height,
+            prepared.output_width, prepared.output_height,
+            prepared.timeline_mode, prepared.target.kind,
+            prepared.target.selector, prepared.target.geometry_mode,
+            prepared.loaded.strategy, prepared.duration)
+
+
+@contextmanager
+def _capture_session(job, signature, browser_executable, page_timeout_ms,
+                     start, end, stop, cancel_event):
+    import copy
+    worker_job = copy.deepcopy(job)
+    renderer = HtmlVideoRenderer(browser_executable=browser_executable,
+                                 page_timeout_ms=page_timeout_ms)
+    renderer._cancel_event = _CaptureCancel(stop, cancel_event)
+    prepared = None
+    try:
+        renderer._check_cancel()
+        prepared = renderer._prepare(worker_job, deep_analysis=False)
+        errors = [item.message for item in prepared.diagnostics if item.severity == 'error']
+        if errors or _capture_signature(prepared) != signature:
+            raise ExportError('Independent capture source differs from the original: ' +
+                              '; '.join(errors or ['target, geometry, duration or timeline changed']))
+        previous = None
+        cached = None
+
+        def capture(index):
+            nonlocal previous, cached
+            renderer._check_cancel()
+            source_time = renderer._frame_source_time(
+                index, worker_job.render.fps, start, end,
+                worker_job.timeline.hold_start, worker_job.timeline.hold_end)
+            if cached is not None and source_time == previous:
+                return cached, 0.0, 0.0
+            then = time.perf_counter()
+            renderer._seek(prepared, worker_job, source_time, previous, None)
+            sought = time.perf_counter()
+            data = renderer._capture_frame(prepared, worker_job)
+            elapsed = time.perf_counter() - sought
+            previous, cached = source_time, data
+            return data, sought - then, elapsed
+
+        yield capture
+    finally:
+        try:
+            if prepared is not None:
+                prepared.loaded.close()
+        finally:
+            renderer.close()
 
 
 class HtmlVideoRenderer:
@@ -1543,7 +1605,24 @@ class HtmlVideoRenderer:
                 self._reapply_geometry_guard(target)
                 self._guard_frame_chain(target)
                 self._wait_raf(target.frame, 1)
-                data = target.locator.screenshot(
+                screenshot = target.locator.screenshot
+                if job.render.fast_capture:
+                    box = target.locator.bounding_box()
+                    viewport = page.viewport_size
+                    covers_viewport = (
+                        box is not None and viewport is not None
+                        and viewport['width'] == prepared.source_width
+                        and viewport['height'] == prepared.source_height
+                        and all(math.isclose(box[key], value, abs_tol=1e-6, rel_tol=0)
+                                for key, value in [('x', 0), ('y', 0),
+                                    ('width', prepared.source_width),
+                                    ('height', prepared.source_height)])
+                    )
+                    if covers_viewport:
+                        # Guards put the capture root at 0,0 and hide siblings.
+                        # Page capture avoids redundant element stability/scroll waits.
+                        screenshot = page.screenshot
+                data = screenshot(
                     type="png",
                     scale="device",
                     caret="hide",
@@ -1770,9 +1849,11 @@ class HtmlVideoRenderer:
         cancel_event: Optional[Event] = None,
         run_event: Optional[Event] = None,
     ) -> ExportResult:
+        wall_started = time.perf_counter()
+        self.last_render_stats = {}
+        import copy
+        job = copy.deepcopy(job)
         if output_path is not None:
-            import copy
-            job = copy.deepcopy(job)
             job.render.save_next_to_source = False
             job.render.output_directory = str(Path(output_path).expanduser().resolve().parent)
         job.validate()
@@ -1784,6 +1865,10 @@ class HtmlVideoRenderer:
         temp_output: Optional[Path] = None
         watchdog_stop = threading.Event()
         watchdog = None
+        capture_pool = None
+        metrics = dict(seek_seconds=0.0, screenshot_seconds=0.0,
+                       frame_wait_seconds=0.0, pipe_write_seconds=0.0,
+                       finalize_seconds=0.0)
 
         try:
             errors = [item.message for item in prepared.diagnostics if item.severity == "error"]
@@ -1806,6 +1891,21 @@ class HtmlVideoRenderer:
             resolved_processing = resolve_processing_config(job.render.processing, analysis)
             filter_chain = build_filter_chain(resolved_processing)
             processing_key = resolved_processing.preset_key
+
+            from media_pipeline import capture_plan, OrderedCapturePool
+            declared_safe = False
+            if job.render.capture_workers == 0 and prepared.timeline_mode not in {
+                    TimelineMode.STATIC, TimelineMode.REALTIME, TimelineMode.BROWSER_CLOCK}:
+                declared_safe = bool(self._evaluate_target(prepared.target, """el =>
+                    el?.getAttribute('data-video-export-parallel-safe') === 'true' ||
+                    window.HTML_VIDEO_EXPORT?.parallelSafe === true
+                """))
+            plan = capture_plan(job, prepared.timeline_mode, prepared.output_width,
+                                prepared.output_height, total_frames, declared_safe)
+            metrics['capture_workers'] = plan.workers
+            metrics['fast_capture'] = job.render.fast_capture
+            _log(self.log_callback, f'Browser capture: {plan.workers} worker(s); {plan.reason}. '
+                 f'PNG buffer budget {job.render.frame_buffer_mb} MiB (browser/encoder RAM additional).')
 
             final_output = output_path.expanduser().resolve() if output_path else choose_output_path(
                 job, processing_key=processing_key
@@ -1868,6 +1968,16 @@ class HtmlVideoRenderer:
             watchdog = threading.Thread(target=monitor_encoder, daemon=True)
             watchdog.start()
 
+            if plan.workers > 1:
+                signature = _capture_signature(prepared)
+                browser_path, timeout = self.browser_executable, self.page_timeout_ms
+                capture_pool = OrderedCapturePool(
+                    lambda _lane, stop: _capture_session(job, signature, browser_path,
+                        timeout, start, end, stop, cancel_event),
+                    plan.workers, total_frames, plan.max_frame_bytes,
+                    self._check_cancel, run_event)
+                capture_pool.__enter__()
+
             render_started = time.perf_counter()
             previous_source_time: Optional[float] = None
             realtime_origin: Optional[float] = None
@@ -1900,9 +2010,14 @@ class HtmlVideoRenderer:
                         (cached_source_time is not None and math.isclose(source_time, cached_source_time, abs_tol=1e-12)))
                 )
 
-                if can_reuse:
+                if capture_pool is not None:
+                    capture_started = time.perf_counter()
+                    png = capture_pool.frame(frame_index)
+                    metrics['frame_wait_seconds'] += time.perf_counter() - capture_started
+                elif can_reuse:
                     png = cached_static_frame
                 else:
+                    seek_started = time.perf_counter()
                     realtime_origin = self._seek(
                         prepared,
                         job,
@@ -1910,12 +2025,17 @@ class HtmlVideoRenderer:
                         previous_source_time,
                         realtime_origin,
                     )
+                    screenshot_started = time.perf_counter()
+                    metrics['seek_seconds'] += screenshot_started - seek_started
                     png = self._capture_frame(prepared, job)
+                    metrics['screenshot_seconds'] += time.perf_counter() - screenshot_started
                     cached_static_frame = png
                     cached_source_time = source_time
 
                 try:
+                    write_started = time.perf_counter()
                     process.stdin.write(png)
+                    metrics['pipe_write_seconds'] += time.perf_counter() - write_started
                 except (BrokenPipeError, OSError) as exc:
                     self._check_cancel()
                     detail = collector.finish() if collector else ""
@@ -1944,12 +2064,20 @@ class HtmlVideoRenderer:
                         }
                     )
 
+            if capture_pool is not None:
+                metrics['seek_seconds'] = capture_pool.seek_seconds
+                metrics['screenshot_seconds'] = capture_pool.capture_seconds
+                capture_pool.close()
+                capture_pool = None
+
             # A cancel arriving after the last frame but before commit must still win.
             if cancel_event is not None and cancel_event.is_set():
                 raise ExportCancelled("Export cancelled before finalization.")
 
+            finalize_started = time.perf_counter()
             process.stdin.close()
             return_code = process.wait(timeout=max(120, total_frames / 2))
+            metrics['finalize_seconds'] = time.perf_counter() - finalize_started
             self._check_cancel()
             detail = collector.finish() if collector else ""
             if return_code != 0:
@@ -1967,6 +2095,11 @@ class HtmlVideoRenderer:
             final_output = commit_output(temp_output, final_output, overwrite=job.render.overwrite)
             temp_output = None
 
+            metrics['total_seconds'] = time.perf_counter() - wall_started
+            metrics['frames'] = total_frames
+            metrics['end_to_end_fps'] = total_frames / max(metrics['total_seconds'], 1e-9)
+            self.last_render_stats = dict(metrics)
+            _log(self.log_callback, 'Render timings: ' + json.dumps(metrics, sort_keys=True))
             return ExportResult(
                 output_path=final_output,
                 source_width=prepared.source_width,
@@ -2000,6 +2133,13 @@ class HtmlVideoRenderer:
                     process.kill()
             raise
         finally:
+            if capture_pool is not None:
+                # A render failure/cancellation already takes precedence. Stop
+                # producers before disposing the process/parent source below.
+                try:
+                    capture_pool.close()
+                except Exception:
+                    pass
             watchdog_stop.set()
             if watchdog is not None: watchdog.join(timeout=3)
             if process is not None:

@@ -34,6 +34,7 @@ from typing import Any, Callable, Optional
 
 from models import (
     AudioMode,
+    MAX_CAPTURE_WORKERS,
     CaptureMode,
     GeometryMode,
     JobConfig,
@@ -217,6 +218,9 @@ class JobEditor(Toplevel):
         self.scale_var = DoubleVar(value=config.render.scale)
         self.fps_var = IntVar(value=config.render.fps)
         self.cpu_threads_var = StringVar(value=str(config.render.cpu_threads))
+        self.capture_workers_var = StringVar(value=str(config.render.capture_workers))
+        self.frame_buffer_var = StringVar(value=str(config.render.frame_buffer_mb))
+        self.fast_capture_var = BooleanVar(value=config.render.fast_capture)
         self.profile_var = StringVar(value=OUTPUT_PROFILES[config.render.output_profile_key].label)
         self.next_to_source_var = BooleanVar(value=config.render.save_next_to_source)
         self.output_dir_var = StringVar(value=config.render.output_directory)
@@ -285,17 +289,20 @@ class JobEditor(Toplevel):
         output_tab = ttk.Frame(notebook, padding=14)
         process_tab = ttk.Frame(notebook, padding=14)
         audio_tab = ttk.Frame(notebook, padding=14)
+        performance_tab = ttk.Frame(notebook, padding=14)
         notebook.add(source_tab, text="Source & Capture")
         notebook.add(timing_tab, text="Timeline")
         notebook.add(output_tab, text="Output")
         notebook.add(process_tab, text="Processing")
         notebook.add(audio_tab, text="Audio")
+        notebook.add(performance_tab, text="Performance")
 
         self._build_source_tab(source_tab)
         self._build_timing_tab(timing_tab)
         self._build_output_tab(output_tab)
         self._build_processing_tab(process_tab)
         self._build_audio_tab(audio_tab)
+        self._build_performance_tab(performance_tab)
 
         buttons = ttk.Frame(root)
         buttons.pack(fill="x", pady=(12, 0))
@@ -431,6 +438,26 @@ class JobEditor(Toplevel):
             wraplength=650,
         ).grid(row=8, column=0, columnspan=3, sticky="w", pady=(16, 0))
 
+    def _build_performance_tab(self, tab: ttk.Frame) -> None:
+        self._row(tab, 0, "Capture workers per export",
+                  ttk.Spinbox(tab, from_=0, to=MAX_CAPTURE_WORKERS, textvariable=self.capture_workers_var),
+                  "0: auto for declared-safe sources; 1: sequential. 2+ asserts independent seeking.")
+        self._row(tab, 1, "PNG frame buffer (MiB)",
+                  ttk.Spinbox(tab, from_=16, to=4096, textvariable=self.frame_buffer_var),
+                  "Bounds buffered PNG payloads. Browser and encoder RAM are additional.")
+        ttk.Checkbutton(tab, text="Faster guarded viewport screenshots",
+                        variable=self.fast_capture_var).grid(row=2, column=1, columnspan=2,
+                                                             sticky="w", padx=12, pady=8)
+        ttk.Label(tab, text=(
+            "Capture workers accelerate a SINGLE movie with separate browser instances. "
+            "Start with 4 for deterministic, independently seekable animations. "
+            "Each instance must produce the same frame for a timestamp after a fresh load. "
+            "Random content, external state, simulations and cumulative seek hooks are not safe. "
+            "Browser Clock and Realtime remain sequential. Static holds reuse one frame. "
+            "Queue workers run separate movies; CPU threads on Output control FFmpeg. "
+            "Use the render log to inspect effective worker counts and stage timings."
+        ), wraplength=650).grid(row=3, column=0, columnspan=3, sticky="w", pady=16)
+
     def _build_audio_tab(self, tab: ttk.Frame) -> None:
         from models import AUDIO_BITRATES, AUDIO_SAMPLE_RATES, AUDIO_CHANNELS
         self._row(tab, 0, "Audio mode", ttk.Combobox(tab, state="readonly", values=tuple(AUDIO_LABELS), textvariable=self.audio_mode_var))
@@ -562,6 +589,9 @@ class JobEditor(Toplevel):
             config.render.scale = float(self.scale_var.get())
             config.render.fps = int(self.fps_var.get())
             config.render.cpu_threads = int(self.cpu_threads_var.get())
+            config.render.capture_workers = int(self.capture_workers_var.get())
+            config.render.frame_buffer_mb = int(self.frame_buffer_var.get())
+            config.render.fast_capture = bool(self.fast_capture_var.get())
             config.render.output_profile_key = OUTPUT_PROFILE_LABEL_TO_KEY[self.profile_var.get()]
             config.render.save_next_to_source = bool(self.next_to_source_var.get())
             config.render.output_directory = self.output_dir_var.get().strip()
