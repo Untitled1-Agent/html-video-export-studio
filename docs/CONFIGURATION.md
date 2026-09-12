@@ -203,7 +203,7 @@ Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
 
 Video arguments:
 ```text
--noautoscale -c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 8 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v libx264 -x264-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0 -crf 8 -preset slow -pix_fmt yuv420p -profile:v main -tag:v avc1 -refs 3 -bf 2 -g 120 -maxrate 30M -bufsize 60M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:
@@ -219,7 +219,7 @@ Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
 
 Video arguments:
 ```text
--noautoscale -c:v libx265 -x265-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:range=limited:open-gop=0:log-level=error -crf 10 -preset slow -pix_fmt yuv420p -profile:v main -tag:v hvc1 -g 120 -maxrate 20M -bufsize 40M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+-noautoscale -c:v libx265 -x265-params colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:range=limited:open-gop=0:log-level=error -crf 10 -preset slow -pix_fmt yuv420p -profile:v main -tag:v hvc1 -g 120 -maxrate 30M -bufsize 60M -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
 ```
 
 Audio arguments:

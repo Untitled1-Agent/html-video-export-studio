@@ -1,3 +1,4 @@
+- Raise the Social/HEVC VBV bound from 20M/40M to 30M/60M after sustained-detail stress renders showed the old ceiling could override CRF quality.
 # Changelog
 
 ## Unreleased — browser capture performance

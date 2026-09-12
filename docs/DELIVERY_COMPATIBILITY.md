@@ -38,8 +38,9 @@ for every profile, including archival and alpha-capable outputs.
 New desktop, CLI and Python API jobs use **Social delivery — Sharp compatible
 MP4 (default)**: native 1× capture, 60 fps, 8-bit H.264 Main / `yuv420p`, `avc1`
 sample entries, and CRF 8 / slow encoding. Closed GOPs, at most 120 frames
-between keyframes, three reference frames, two B-frames and a 20 Mb/s VBV ceiling
-with a 40 Mb buffer bound delivery complexity. The existing fast-start MP4
+between keyframes, three reference frames, two B-frames and a 30 Mb/s VBV ceiling
+with a 60 Mb buffer bound delivery complexity. The higher bound preserves CRF 8 quality
+on sustained high-detail 1080×1920 / 60 fps motion while still bounding delivery spikes. The existing fast-start MP4
 layout remains enabled. An external soundtrack is encoded as AAC-LC stereo at
 48 kHz; silent jobs do not acquire an unsolicited audio track.
 
