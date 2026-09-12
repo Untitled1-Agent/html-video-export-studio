@@ -56,6 +56,7 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 | `output_directory` | `str` | `""` |
 | `save_next_to_source` | `bool` | `true` |
 | `filename_template` | `str` | `"{stem}_{scale}x_{fps}fps_{profile}_{processing}.{ext}"` |
+| `cpu_threads` | `int` | `0` |
 
 ## ProcessingConfig
 
@@ -225,7 +226,7 @@ Audio arguments:
 usage: html-video-export [-h]
                          [--recipe {motion_graphics_master,exact_source_master,editing_master,social_delivery,web_animation,video_element,static_page_hold,website_capture}]
                          [--probe] [--deep-analysis] [--output OUTPUT] [--scale SCALE]
-                         [--fps FPS]
+                         [--fps FPS] [--cpu-threads N]
                          [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,vp9_webm}]
                          [--processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}]
                          [--capture {auto,marker,selector,viewport,full_page}]
@@ -255,6 +256,8 @@ options:
   --output OUTPUT       Output file for one source, or directory for several sources.
   --scale SCALE
   --fps FPS
+  --cpu-threads N       Encoder threads per export; 0 selects a CPU-aware budget
+                        (default).
   --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,vp9_webm}
   --processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}
   --capture {auto,marker,selector,viewport,full_page}

@@ -14,6 +14,7 @@ from typing import Any, Optional
 # Shared defaults for the Python API, CLI and desktop new-job recipe.
 DEFAULT_RECIPE_KEY = "social_delivery"
 DEFAULT_SHARPEN_STRENGTH = 0.28
+MAX_CPU_THREADS = 256
 
 
 def strict_int(value: Any) -> int:
@@ -249,6 +250,7 @@ class RenderConfig:
     output_directory: str = ""
     save_next_to_source: bool = True
     filename_template: str = "{stem}_{scale}x_{fps}fps_{profile}_{processing}.{ext}"
+    cpu_threads: int = 0  # 0: automatic; otherwise encoder threads per export.
 
     def validate(self, for_export: bool = True) -> None:
         from presets import OUTPUT_PROFILES, PROCESSING_PRESETS
@@ -257,6 +259,8 @@ class RenderConfig:
         if self.processing.preset_key not in PROCESSING_PRESETS:
             raise ValueError('Unknown processing preset: ' + self.processing.preset_key)
         strict_int(self.fps)
+        if not 0 <= strict_int(self.cpu_threads) <= MAX_CPU_THREADS:
+            raise ValueError(f"CPU threads must be between 0 (automatic) and {MAX_CPU_THREADS}.")
         if isinstance(self.scale, bool): raise ValueError('Scale must be a number, not a boolean.')
         if not math.isfinite(float(self.scale)) or not 0.25 <= float(self.scale) <= 4.0:
             raise ValueError("Scale must be between 0.25× and 4×.")
@@ -484,6 +488,7 @@ def job_config_from_dict(data: dict[str, Any]) -> JobConfig:
     render = RenderConfig(
         scale=strict_float(render_data.get("scale", render_base.scale)),
         fps=strict_int(render_data.get("fps", render_base.fps)),
+        cpu_threads=strict_int(render_data.get("cpu_threads", render_base.cpu_threads)),
         output_profile_key=str(
             render_data.get("output_profile_key", render_base.output_profile_key)
         ),

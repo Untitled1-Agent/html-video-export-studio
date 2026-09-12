@@ -216,6 +216,7 @@ class JobEditor(Toplevel):
 
         self.scale_var = DoubleVar(value=config.render.scale)
         self.fps_var = IntVar(value=config.render.fps)
+        self.cpu_threads_var = StringVar(value=str(config.render.cpu_threads))
         self.profile_var = StringVar(value=OUTPUT_PROFILES[config.render.output_profile_key].label)
         self.next_to_source_var = BooleanVar(value=config.render.save_next_to_source)
         self.output_dir_var = StringVar(value=config.render.output_directory)
@@ -384,6 +385,10 @@ class JobEditor(Toplevel):
         self._row(tab, 5, "Output folder", output_row)
         self._row(tab, 6, "Filename template", ttk.Entry(tab, textvariable=self.filename_var), "Fields: {stem}, {scale}, {fps}, {profile}, {processing}, {ext}")
         ttk.Checkbutton(tab, text="Overwrite existing output", variable=self.overwrite_var).grid(row=7, column=1, sticky="w", padx=(12, 8), pady=5)
+        from models import MAX_CPU_THREADS
+        self._row(tab, 8, "CPU threads per export",
+                  ttk.Spinbox(tab, from_=0, to=MAX_CPU_THREADS, textvariable=self.cpu_threads_var),
+                  "0 = automatic, shared across queue workers. Higher values use more CPU/RAM.")
 
     def _build_processing_tab(self, tab: ttk.Frame) -> None:
         processing_combo = ttk.Combobox(
@@ -535,6 +540,7 @@ class JobEditor(Toplevel):
 
             config.render.scale = float(self.scale_var.get())
             config.render.fps = int(self.fps_var.get())
+            config.render.cpu_threads = int(self.cpu_threads_var.get())
             config.render.output_profile_key = OUTPUT_PROFILE_LABEL_TO_KEY[self.profile_var.get()]
             config.render.save_next_to_source = bool(self.next_to_source_var.get())
             config.render.output_directory = self.output_dir_var.get().strip()
@@ -1279,12 +1285,20 @@ class StudioApp(Tk):
         except Exception:
             messagebox.showerror("Invalid worker count", "Workers must be between 1 and 8.")
             return
+        workers = min(workers, len(queued))
         if workers > 2 and any(job.config.render.scale >= 2 for job in queued):
             if not messagebox.askyesno(
                 "High memory use",
                 "More than two concurrent 2× exports can use substantial RAM. Continue?",
             ):
                 return
+
+        from media_pipeline import snapshot_for_export
+        try:
+            snapshots = {job.job_id: snapshot_for_export(job.config, workers) for job in queued}
+        except (TypeError, ValueError) as exc:
+            messagebox.showerror("Invalid CPU settings", str(exc))
+            return
 
         self.running = True
         self.run_job_ids = {job.job_id for job in queued}
@@ -1299,7 +1313,7 @@ class StudioApp(Tk):
             self.active_cancels[job.job_id]=cancel
             job.phase='Waiting for worker'
             # Snapshot on the main thread. Worker never reads GUI job state.
-            self.work_queue.put((job.job_id,copy.deepcopy(job.config),cancel))
+            self.work_queue.put((job.job_id,snapshots[job.job_id],cancel))
         for _ in range(workers):
             self.work_queue.put(None)
 
@@ -1521,6 +1535,7 @@ class StudioApp(Tk):
                 f"  Trim: {config.timeline.trim_start}s → {config.timeline.trim_end or 'source end'}\n"
                 f"  Holds: {config.timeline.hold_start}s / {config.timeline.hold_end}s\n"
                 f"  Scale/FPS: {config.render.scale:g}× / {config.render.fps}\n"
+                f"  CPU threads: {config.render.cpu_threads or 'automatic'}\n"
                 f"  Codec: {OUTPUT_PROFILES[config.render.output_profile_key].label}\n"
                 f"  Processing: {PROCESSING_PRESETS.get(config.render.processing.preset_key, PROCESSING_PRESETS['custom']).label}\n"
                 f"  Audio: {config.render.audio.mode.value}\n\n",

@@ -96,6 +96,10 @@ Jobs are snapshotted at run start. Pending/running jobs cannot be edited during 
 
 Completed movies and previews are published from temporary files. Existing outputs are preserved by default with numbered alternatives. Overwrite is explicit. Export destinations may not replace the input HTML or external soundtrack. See [user guide](docs/USER_GUIDE.md) for output naming and filesystem limits.
 
+## CPU performance
+
+Video exports use CPU-aware FFmpeg thread budgets. Choose **Job Settings → Output → CPU threads per export** or `--cpu-threads N` on the CLI; **0** is automatic. The desktop shares automatic budgets across queue workers while a single queued video can use more cores. Browser capture remains ordered. See [CPU parallelism and benchmarking](docs/PERFORMANCE.md) for limits and measurement commands.
+
 ## Automation
 
 ```bash
