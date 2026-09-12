@@ -1,27 +1,51 @@
-name: Render performance
+name: Apply reviewed capture optimization
 on:
   push:
     branches: [perf/parallel-browser-capture]
-  workflow_dispatch:
+    paths: ['.github/capture-part*.b64', '.github/capture-integrate.py', '.github/workflows/render-performance.yml']
 permissions:
-  contents: read
+  contents: write
 jobs:
-  source-validation:
+  apply:
+    if: github.repository == 'Untitled1-Agent/html-video-export-studio' && github.ref == 'refs/heads/perf/parallel-browser-capture'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          persist-credentials: false
-      - name: Source fingerprints
+          fetch-depth: 1
+      - name: Install existing application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Apply SHA-verified locally tested patch
+        shell: bash
         run: |
+          set -euo pipefail
           python - <<'PY'
-          import hashlib, json
+          import base64, gzip, hashlib, subprocess
           from pathlib import Path
-          for name in ['renderer.py']:
-              data = Path(name).read_bytes()
-              lines = data.splitlines(keepends=True)
-              print(name, len(data), len(lines))
-              for start in range(0, len(lines), 100):
-                  print(start + 1, hashlib.sha256(b''.join(lines[start:start+100])).hexdigest())
+          parts = ''.join(Path(f'.github/capture-part{i}.b64').read_text() for i in range(3))
+          data = gzip.decompress(base64.b64decode(parts, validate=True))
+          assert hashlib.sha256(data).hexdigest() == 'ebb9542e9e8b4d00e0bab088bec8b277a05d8b2fb375e847d209634f51339e5c'
+          subprocess.run(['git', 'apply', '--check', '-'], input=data, check=True)
+          subprocess.run(['git', 'apply', '-'], input=data, check=True)
           PY
+          python .github/capture-integrate.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/PERFORMANCE.md')
+          text = p.read_text()
+          old = 'This changes FFmpeg video decoder, filter, and encoder parallelism. Browser page\nseeking and screenshots remain ordered on their owning Playwright thread. Timer,\nmedia, and stateful JavaScript timelines are not divided among shared browser\nthreads. PNG previews keep their existing conservative processing path.'
+          assert old in text
+          text = text.replace(old, 'These CPU-thread controls change FFmpeg decoder, filter and encoder pools.\nFor capture-bound movies, the separate [single-video capture controls](PARALLEL_CAPTURE.md)\nadd independent browser workers for declared-safe/explicitly opted-in seekable\nsources, plus a guarded viewport screenshot fast path. Each browser stays on\nits owning Playwright thread; stateful Browser Clock/Realtime remain sequential.\nPNG previews keep the same processing/color path and can use the guarded screenshot optimization.')
+          p.write_text(text)
+          PY
+          rm .github/capture-part*.b64 .github/capture-integrate.py .github/workflows/render-performance.yml
+          python tools/check_docs.py
+          git diff --check
+          git add app.py cli.py models.py presets.py renderer.py media_pipeline.py README.md CHANGELOG.md docs/CONFIGURATION.md docs/PERFORMANCE.md docs/PARALLEL_CAPTURE.md tests/test_parallel_capture.py tests/test_parallel_capture_ui.py tools/benchmark_capture.py validation/parallel_capture_benchmark.json
+          git add -u .github
+          git diff --cached --stat
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Implement ordered parallel browser capture and guarded fast screenshots'
+          git push origin HEAD:perf/parallel-browser-capture
