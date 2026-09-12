@@ -29,7 +29,7 @@ jobs:
           python tools/_apply_audio_patch.py
           python tools/generate_reference.py
           git rm tools/_apply_audio_patch.py .github/workflows/audio-development.yml
-          git add models.py media_pipeline.py renderer.py app.py cli.py docs README.md tests .github/workflows/tests.yml
+          git add models.py media_pipeline.py renderer.py app.py cli.py presets.py docs README.md tests .github/workflows/tests.yml
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Add per-HTML soundtracks, signed sync, and configurable audio delivery'
           git push origin HEAD:feat/per-html-audio-sync
           git rev-parse HEAD
