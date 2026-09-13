@@ -27,6 +27,9 @@ def local_link_errors(root: Path) -> list[str]:
 
 def main() -> int:
     errors = local_link_errors(ROOT)
+    changelog = (ROOT/'CHANGELOG.md').read_text(encoding='utf-8')
+    if not changelog.startswith('# Changelog\n'):
+        errors.append('CHANGELOG.md must start with the # Changelog heading')
     text = (ROOT/'pyproject.toml').read_text(encoding='utf-8')
     if not re.search(r'^version\s*=\s*"'+re.escape(APP_VERSION)+r'"\s*$', text, re.M):
         errors.append('pyproject.toml and version.py versions differ')
@@ -34,7 +37,7 @@ def main() -> int:
         print('\n'.join(errors), file=sys.stderr)
         return 1
     if check_reference(['--check']): return 1
-    print('Local documentation links and package version pass.')
+    print('Local documentation links, changelog structure, and package version pass.')
     return 0
 
 

@@ -4,7 +4,7 @@
 
 ## Choose the right path
 
-For authored motion graphics, use **Exact source master** as the baseline: 2× browser rasterization, 60 fps, lossless RGB, No processing. For a browser/player-friendly copy choose Social delivery, then inspect its default sharpening and chroma tradeoff. For transparency choose ProRes 4444, transparent capture, and No processing. For a webpage with no natural endpoint explicitly choose a duration and a suitable timing adapter.
+For authored motion graphics, use **Exact source master** as the baseline: 2× browser rasterization, 60 fps, lossless RGB, No processing. For the broadest browser/player/social compatibility choose Social delivery, then inspect its default sharpening and chroma tradeoff. Choose **High Efficiency — H.265/HEVC 4:2:0 MP4** only for controlled destinations where HEVC support is known. Choose **High Efficiency — AV1 4:2:0 MP4** for modern destinations where AV1 playback/upload support is known and slower software encoding is acceptable. For transparency choose ProRes 4444, transparent capture, and No processing. For a webpage with no natural endpoint explicitly choose a duration and a suitable timing adapter.
 
 Recipes are starting configurations, not automatic fixes for incompatible HTML. The [generated configuration reference](CONFIGURATION.md) lists their exact keys and defaults. The new-job default is **Social delivery — Sharp compatible MP4 (default)**: 1× / 60 fps H.264 Main 4:2:0 with explicit CAS 0.28 sharpening. Exact source master remains an opt-in unfiltered reference recipe. See [delivery compatibility](DELIVERY_COMPATIBILITY.md) for VLC/Android/TikTok guidance, the one-time legacy-default migration, and how to re-render existing jobs without resetting their timing settings.
 
@@ -14,7 +14,7 @@ Use Add HTML for one or multiple files, Add Folder for HTML inputs in a director
 
 Analyze a selected job before exporting. The inspector reports load strategy, target kind/selector/frame, timing mode, duration and its provenance, intrinsic and output dimensions, geometry policy, and errors/warnings. Deep analysis samples suitable seekable sources to suggest processing. It does not make an incompatible animation seekable.
 
-Errors block export. Warnings deserve inspection: low raster density means assets contain too few pixels for the requested size; very large frames warn of memory use; real-time timing warns about missed states; browser console warnings can reveal missing network assets. The app is not a complete asset-health checker for every loading pattern. A visually wrong preview must not be treated as a passing export merely because no exception occurred.
+Errors block export. Uncaught JavaScript page/runtime errors are treated as errors and stop export, including errors that occur during seek/capture, so a source-generated error overlay is not silently encoded. Plain browser `console.error` messages remain warnings because some pages log non-fatal telemetry there. Other warnings deserve inspection: low raster density means assets contain too few pixels for the requested size; very large frames warn of memory use; real-time timing warns about missed states; browser console warnings can reveal missing network assets. The app is not a complete asset-health checker for every loading pattern. A visually wrong preview must not be treated as a passing export merely because no exception occurred.
 
 ## Job settings
 
@@ -23,6 +23,8 @@ Double-click/edit a job to choose the capture target, selector index, viewport, 
 **Preserve layout** keeps responsive page geometry. **Lock intrinsic** pins a marked composition to authored dimensions and neutralizes outer preview transforms/clipping. It can change the way a generic webpage is laid out; use it for a dedicated export surface, not arbitrarily for every page. Manual element dimensions require intrinsic locking. Geometry is checked during capture; a mismatch is an error rather than an implicit FFmpeg resize.
 
 Scale supports 0.25×–4×. Fractional scale uses Chromium-style pixel rounding. Frame rate is an integer 1–240; 29.97/59.94 rational rates are not currently represented by the model. Higher capture fps does not synthesize motion in a video/raster asset authored at a lower rate.
+
+For H.264, H.265/HEVC, and AV1 output profiles, **CRF override** is optional per job. Leave the field blank to use the profile default (Social H.264 = 8; HEVC = 10; AV1 = 18). Lower values increase quality and usually file size. Overrides are validated from 1 through 51 and are deliberately unavailable for ProRes, VP9, and the exact RGB master. Applying a recipe clears a manual CRF because recipes reset codec settings.
 
 ## Test frame versus Compare
 

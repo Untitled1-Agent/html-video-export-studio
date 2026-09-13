@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -47,6 +48,16 @@ def _frame_buffer(value: str) -> int:
     return size
 
 
+def _crf(value: str) -> float:
+    try:
+        crf = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("CRF must be a number.") from exc
+    if not math.isfinite(crf) or not 1 <= crf <= 51:
+        raise argparse.ArgumentTypeError("CRF must be between 1 and 51.")
+    return crf
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="html-video-export",
@@ -70,6 +81,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-fast-capture", action="store_true",
                         help="Use legacy element screenshot waits instead of the guarded viewport fast path.")
     parser.add_argument("--profile", choices=OUTPUT_PROFILES)
+    parser.add_argument("--crf", type=_crf, metavar="CRF",
+                        help="Override H.264/H.265/AV1 CRF (1-51); omit to use the profile default.")
     parser.add_argument("--processing", choices=PROCESSING_PRESETS)
     parser.add_argument("--capture", choices=[item.value for item in CaptureMode])
     parser.add_argument("--selector", default="")
@@ -173,6 +186,8 @@ def make_job(source: str, args: argparse.Namespace):
         job.render.fps = args.fps
     if args.profile:
         job.render.output_profile_key = args.profile
+    if args.crf is not None:
+        job.render.video_crf = args.crf
     if args.processing:
         job.render.processing = PROCESSING_PRESETS[args.processing].to_config()
     if args.capture:

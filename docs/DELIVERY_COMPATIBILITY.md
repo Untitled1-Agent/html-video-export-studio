@@ -37,17 +37,37 @@ for every profile, including archival and alpha-capable outputs.
 
 New desktop, CLI and Python API jobs use **Social delivery — Sharp compatible
 MP4 (default)**: native 1× capture, 60 fps, 8-bit H.264 Main / `yuv420p`, `avc1`
-sample entries, and CRF 12 / slow encoding. Closed GOPs, at most 120 frames
-between keyframes, three reference frames, two B-frames and a 20 Mb/s VBV ceiling
-with a 40 Mb buffer bound delivery complexity. The existing fast-start MP4
-layout remains enabled. An external soundtrack is encoded as AAC-LC stereo at
-48 kHz; silent jobs do not acquire an unsolicited audio track.
+sample entries, and CRF 8 / slow encoding. Closed GOPs, at most 120 frames
+between keyframes, three reference frames, two B-frames and a 30 Mb/s VBV ceiling
+with a 60 Mb buffer bound delivery complexity. The higher bound preserves CRF 8
+quality on sustained high-detail 1080×1920 / 60 fps motion while still bounding
+delivery spikes. The existing fast-start MP4 layout remains enabled. An external
+soundtrack is encoded as AAC-LC stereo at 48 kHz; silent jobs do not acquire an
+unsolicited audio track.
 
 **Social Compensation now applies CAS 0.28 explicitly**, rather than relying on
 auto analysis that may disable sharpening. It improves edge definition, not
 missing source detail. It does not increase contrast or saturation. Choose
 No processing to disable it, or Exact source master for unprocessed lossless RGB.
 No implicit geometric resizing, clipping or padding was introduced.
+
+An optional **High Efficiency — H.265/HEVC 4:2:0 MP4** profile uses
+`libx265`, CRF 10 / slow, Main 8-bit 4:2:0, `hvc1`, the same explicit colour
+metadata, 30 Mb/s maximum rate with a 60 Mb buffer, fast-start MP4, and AAC-LC
+48 kHz stereo audio defaults. It is intended for controlled modern-device
+workflows where HEVC support has been verified. It is **not** the Social delivery
+default because browser/player/upload acceptance is less universal than H.264.
+
+An optional **High Efficiency — AV1 4:2:0 MP4** profile uses
+`libaom-av1`, CRF 18, `cpu-used 6`, row multithreading, Main 8-bit 4:2:0,
+`av01`, the same explicit colour metadata, fast-start MP4, and AAC-LC 48 kHz
+stereo audio defaults. AV1 constant-quality mode uses `-b:v 0`; it intentionally
+does not set the H.264/HEVC 30M/60M VBV guardrail because packaged libaom rejects
+maxrate/buffer constraints when no target bitrate is set. AV1 is opt-in because
+software encoding is slower and playback/upload/editor acceptance varies more
+than H.264.
+
+H.264, HEVC, and AV1 allow an optional per-job CRF override from 1–51. Leaving it blank keeps the tested profile default. Lower CRF raises quality and usually file size. The 30M/60M VBV guardrail applies to H.264/HEVC; AV1 stays in libaom constant-quality mode without a bitrate ceiling.
 
 RGB-to-YUV conversion remains explicit: BT.709 primaries/matrix, limited YUV
 range and the screenshot's sRGB transfer. Relabelling sRGB pixels as BT.709
@@ -74,6 +94,18 @@ For a new CLI export:
 python cli.py source.html --recipe social_delivery --output delivery.mp4
 ```
 
+For opt-in HEVC:
+
+```bash
+python cli.py source.html --recipe social_delivery --profile h265_420_mp4 --output delivery-hevc.mp4
+```
+
+For opt-in AV1:
+
+```bash
+python cli.py source.html --recipe social_delivery --profile av1_420_mp4 --output delivery-av1.mp4
+```
+
 Keep any source-specific selector, timing-adapter and duration arguments needed
 by that source. For an archival reference, explicitly choose
 `--recipe exact_source_master`; keep a separate delivery copy for uploading.
@@ -83,24 +115,29 @@ by that source. For an archival reference, explicitly choose
 This is a broadly compatible encoding preset, not a guarantee for every device
 or upload. Output dimensions must still be even. Huge sources, custom scales
 and frame rates can exceed device capabilities; the encoder selects the actual
-H.264 level rather than falsely labelling arbitrary geometry as a fixed level.
+codec level rather than falsely labelling arbitrary geometry as a fixed level.
 
-TikTok's Content Posting API guide currently recommends MP4/H.264, with 23–60
-fps, 360–4096 pixels on each axis, and at most 4 GB. Account duration limits also
-apply. These are API requirements, not certification of every TikTok app path.
-The studio does not silently resize an out-of-range composition to satisfy them.
+TikTok's Content Posting API media-transfer guide currently lists H.264 and
+H.265 as supported codecs while recommending H.264; AV1 is not listed there, so
+this AV1 profile should not be assumed to be accepted by that API. Account duration
+limits and other upload rules also apply. These are API requirements, not certification of
+every TikTok app path. The studio does not silently resize an out-of-range
+composition to satisfy them.
 
 Run the regressions with FFmpeg, ffprobe and the application dependencies:
 
 ```bash
 python -m unittest discover -s tests -p test_delivery_compatibility.py -v
 python -m unittest discover -s tests -p test_output_autoscale.py -v
+python -m unittest discover -s tests -p test_quality_profiles.py -v
+python -m unittest discover -s tests -p test_quality_cli_media.py -v
 ```
 
-They encode and fully decode 240 frames across changing colours, an RGB-to-RGBA
-PNG transition and GOP boundaries; check timestamps, MP4 box order, AAC output,
-edge definition and exact-master RGB identity. Fixtures do not require a
-browser. They do not substitute for live VLC/Android playback or a TikTok upload.
+They encode and fully decode changing colours, an RGB-to-RGBA PNG transition,
+real CLI/browser H.264, HEVC and AV1 exports with external audio, GOP boundaries,
+timestamps, MP4 box order, AAC output, edge definition and exact-master RGB
+identity. Fixtures do not substitute for live playback on every device or for a
+live social-platform upload.
 
 Primary references:
 

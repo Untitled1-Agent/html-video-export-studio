@@ -146,7 +146,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         key="h264_420_mp4",
         label="Delivery — H.264 4:2:0 MP4",
         description=(
-            "8-bit H.264 Main for phones, VLC, browsers, and social uploads. "
+            "8-bit H.264 Main at high-quality CRF 8 for phones, VLC, browsers, and social uploads. "
             "4:2:0 chroma subsampling may soften saturated text and fine UI edges."
         ),
         extension="mp4",
@@ -155,7 +155,7 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
             "-noautoscale",
             "-c:v", "libx264",
             "-x264-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:fullrange=off:open-gop=0",
-            "-crf", "12",
+            "-crf", "8",
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
             "-profile:v", "main",
@@ -163,8 +163,69 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
             "-refs", "3",
             "-bf", "2",
             "-g", "120",
-            "-maxrate", "20M",
-            "-bufsize", "40M",
+            "-maxrate", "30M",
+            "-bufsize", "60M",
+            "-color_range", "tv",
+            "-color_primaries", "bt709",
+            "-color_trc", "iec61966-2-1",
+            "-colorspace", "bt709",
+        ),
+        audio_codec="aac",
+        audio_args=("-c:a", "aac", "-profile:a", "aac_low", "-b:a", "256k", "-ar", "48000", "-ac", "2"),
+        requires_even_dimensions=True,
+    ),
+    "h265_420_mp4": OutputProfile(
+        key="h265_420_mp4",
+        label="High Efficiency — H.265/HEVC 4:2:0 MP4",
+        description=(
+            "High-quality HEVC/H.265 Main 8-bit delivery using CRF 10 and hvc1 sample entries. "
+            "Usually more efficient than H.264 at comparable fidelity, but playback and social-upload "
+            "support is less universal; Social delivery intentionally remains H.264 by default."
+        ),
+        extension="mp4",
+        video_encoder="libx265",
+        video_args=(
+            "-noautoscale",
+            "-c:v", "libx265",
+            "-x265-params", "colorprim=bt709:transfer=iec61966-2-1:colormatrix=bt709:range=limited:open-gop=0:log-level=error",
+            "-crf", "10",
+            "-preset", "slow",
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "main",
+            "-tag:v", "hvc1",
+            "-g", "120",
+            "-maxrate", "30M",
+            "-bufsize", "60M",
+            "-color_range", "tv",
+            "-color_primaries", "bt709",
+            "-color_trc", "iec61966-2-1",
+            "-colorspace", "bt709",
+        ),
+        audio_codec="aac",
+        audio_args=("-c:a", "aac", "-profile:a", "aac_low", "-b:a", "256k", "-ar", "48000", "-ac", "2"),
+        requires_even_dimensions=True,
+    ),
+    "av1_420_mp4": OutputProfile(
+        key="av1_420_mp4",
+        label="High Efficiency — AV1 4:2:0 MP4",
+        description=(
+            "High-quality AV1 Main 8-bit delivery using libaom-av1 CRF 18 and av01 sample entries. "
+            "Compression efficiency is strong but software encoding is slower and upload/editor support "
+            "is less universal; Social delivery intentionally remains H.264 by default."
+        ),
+        extension="mp4",
+        video_encoder="libaom-av1",
+        video_args=(
+            "-noautoscale",
+            "-c:v", "libaom-av1",
+            "-cpu-used", "6",
+            "-row-mt", "1",
+            "-crf", "18",
+            "-b:v", "0",
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "0",
+            "-tag:v", "av01",
+            "-g", "120",
             "-color_range", "tv",
             "-color_primaries", "bt709",
             "-color_trc", "iec61966-2-1",
@@ -369,7 +430,7 @@ RECIPES: dict[str, Recipe] = {
     "social_delivery": Recipe(
         key="social_delivery",
         label="Social delivery — Sharp compatible MP4 (default)",
-        description="1× / 60 fps H.264 Main 4:2:0 with CAS 0.28 clarity. Default for mobile playback and social uploads; no automatic 4K upscaling.",
+        description="1× / 60 fps H.264 Main 4:2:0 at CRF 8 with CAS 0.28 clarity. Default for mobile playback and social uploads; no automatic 4K upscaling.",
         scale=1.0,
         fps=60,
         output_profile_key="h264_420_mp4",
