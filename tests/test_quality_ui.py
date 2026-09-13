@@ -59,6 +59,10 @@ class QualityUITests(unittest.TestCase):
         from app import JobEditor
         editor = JobEditor(self.app, self.job)
         editor.crf_var.set("7")
+        editor.profile_var.set(OUTPUT_PROFILES["av1_420_mp4"].label)
+        editor._update_profile_description()
+        self.assertEqual(editor.crf_var.get(), "7")
+        self.assertEqual(str(editor.crf_widget.cget("state")), "normal")
         editor.profile_var.set(OUTPUT_PROFILES["prores_hq_mov"].label)
         editor._update_profile_description()
         self.assertEqual(editor.crf_var.get(), "")

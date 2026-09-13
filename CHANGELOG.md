@@ -13,7 +13,8 @@
 
 - Raise the default Social delivery H.264 quality from CRF 12 to CRF 8 while retaining CRF rate control and the existing compatibility constraints. Raise the Social/HEVC VBV guardrail from 20M/40M to 30M/60M after sustained-detail stress renders showed the old ceiling could override CRF quality.
 - Add an opt-in H.265/HEVC Main 4:2:0 MP4 profile using libx265 CRF 10, hvc1 sample entries, fast-start MP4, explicit BT.709/sRGB metadata, and AAC-LC audio. Social delivery remains H.264 by default for broader playback/upload compatibility.
-- Add an optional per-job H.264/H.265 CRF override (1–51) in the desktop, CLI, Python/project model, and renderer while preserving each profile default when unset.
+- Add an optional per-job H.264/H.265/AV1 CRF override (1–51) in the desktop, CLI, Python/project model, and renderer while preserving each profile default when unset.
+- Add an opt-in AV1 Main 8-bit 4:2:0 MP4 profile using portable `libaom-av1`, CRF 18, `av01`, fast-start MP4, explicit BT.709/sRGB metadata, and AAC-LC audio.
 
 ### Added
 

@@ -14,6 +14,7 @@ python cli.py examples/deterministic_svg_event.html --timeline custom_event --ev
 python cli.py examples/css_animation.html --recipe web_animation --duration 2 --output css.mp4
 python cli.py examples/static_hold.html --recipe static_page_hold --duration 3 --output still.mp4
 python cli.py animation.html --recipe exact_source_master --trim-start 1 --trim-end 4 --hold-end .5 --output excerpt.mp4
+python cli.py animation.html --profile av1_420_mp4 --crf 18 --output av1.mp4
 ```
 
 A single source accepts a new `.mp4`, `.mov` or `.webm` file destination. The extension must match the selected profile. An existing directory is a directory even when its name contains dots; a new path without a recognized movie extension is treated as a directory. Multiple sources require a directory. Existing outputs are preserved through suffixing unless `--overwrite` is explicit. A returned output path can therefore differ from the requested basename.
@@ -31,7 +32,7 @@ Exit codes: **0** success; **1** source/export/environment failure; **2** comman
 
 ## Options
 
-`--recipe` chooses initial settings; explicit flags override them. `--scale`, `--fps`, `--profile`, `--crf`, `--processing` affect the output. `--crf 0..51` is available for H.264/H.265 profiles; omit it to keep the selected profile default. Lower CRF means higher quality and usually larger files. `--capture`, `--selector`, `--viewport WIDTH HEIGHT`, `--geometry`, and `--load` configure capture/loading. Supplying `--selector` selects selector mode. `--timeline`, `--duration`, `--trim-start`, `--trim-end`, `--hold-start`, and `--hold-end` configure timing. `--seek-function` is a JavaScript property path, not arbitrary Python code; `--event-name` selects a custom DOM event.
+`--recipe` chooses initial settings; explicit flags override them. `--scale`, `--fps`, `--profile`, `--crf`, `--processing` affect the output. `--crf 1..51` is available for H.264/H.265/AV1 profiles; omit it to keep the selected profile default. Lower CRF means higher quality and usually larger files. `--capture`, `--selector`, `--viewport WIDTH HEIGHT`, `--geometry`, and `--load` configure capture/loading. Supplying `--selector` selects selector mode. `--timeline`, `--duration`, `--trim-start`, `--trim-end`, `--hold-start`, and `--hold-end` configure timing. `--seek-function` is a JavaScript property path, not arbitrary Python code; `--event-name` selects a custom DOM event.
 
 [Generated configuration and complete CLI help](CONFIGURATION.md) lists the accepted enum/preset keys. There is **no** `--project` or `--workers` flag in this CLI release. Projects, parallel queueing, selector index, manual intrinsic dimensions, and custom processing details are accessible through the desktop/Python API; external soundtracks are available through the audio flags documented below. This distinction prevents copying a command for a feature that exists only in the GUI.
 

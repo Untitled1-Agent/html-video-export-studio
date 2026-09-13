@@ -435,7 +435,7 @@ def build_audio_filter_chain(audio: AudioConfig, output_duration: float) -> str:
 
 
 def build_video_output_args(profile: OutputProfile, crf_override: float | None = None) -> list[str]:
-    """Return profile video args with an optional H.264/H.265 CRF override."""
+    """Return profile video args with an optional H.264/H.265/AV1 CRF override."""
     args = list(profile.video_args)
     if crf_override is None:
         return args
@@ -443,8 +443,8 @@ def build_video_output_args(profile: OutputProfile, crf_override: float | None =
     crf = strict_float(crf_override)
     if not 1 <= crf <= 51:
         raise ValueError('Manual CRF must be between 1 and 51.')
-    if profile.video_encoder not in {'libx264', 'libx265'} or '-crf' not in args:
-        raise ValueError('Manual CRF override is available only for H.264/H.265 profiles.')
+    if profile.video_encoder not in {'libx264', 'libx265', 'libaom-av1'} or '-crf' not in args:
+        raise ValueError('Manual CRF override is available only for H.264/H.265/AV1 profiles.')
     index = args.index('-crf')
     args[index + 1] = f'{crf:g}'
     return args

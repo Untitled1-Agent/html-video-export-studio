@@ -47,8 +47,24 @@ class QualityProfileTests(unittest.TestCase):
         self.assertEqual(profile.audio_codec, "aac")
         self.assertIn("aac_low", profile.audio_args)
 
+    def test_av1_is_opt_in_portable_high_efficiency_profile(self):
+        profile = OUTPUT_PROFILES["av1_420_mp4"]
+        self.assertEqual(profile.video_encoder, "libaom-av1")
+        self.assertEqual(option(profile.video_args, "-crf"), "18")
+        self.assertEqual(option(profile.video_args, "-b:v"), "0")
+        self.assertEqual(option(profile.video_args, "-cpu-used"), "6")
+        self.assertEqual(option(profile.video_args, "-row-mt"), "1")
+        self.assertEqual(option(profile.video_args, "-pix_fmt"), "yuv420p")
+        self.assertEqual(option(profile.video_args, "-profile:v"), "0")
+        self.assertEqual(option(profile.video_args, "-tag:v"), "av01")
+        self.assertEqual(option(profile.video_args, "-g"), "120")
+        self.assertNotIn("-maxrate", profile.video_args)
+        self.assertNotIn("-bufsize", profile.video_args)
+        self.assertEqual(profile.audio_codec, "aac")
+        self.assertIn("aac_low", profile.audio_args)
+
     def test_hevc_and_social_profiles_keep_explicit_delivery_colour_metadata(self):
-        for key in ("h264_420_mp4", "h265_420_mp4"):
+        for key in ("h264_420_mp4", "h265_420_mp4", "av1_420_mp4"):
             with self.subTest(profile=key):
                 args = OUTPUT_PROFILES[key].video_args
                 self.assertEqual(option(args, "-color_range"), "tv")
@@ -91,14 +107,49 @@ class QualityProfileTests(unittest.TestCase):
             self.assertEqual(decoded.returncode, 0, decoded.stderr.decode(errors="replace"))
             self.assertFalse(decoded.stderr)
 
+    def test_packaged_ffmpeg_fallback_can_encode_and_decode_av1(self):
+        """The wheel fallback must make the user-facing AV1 profile usable."""
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+        width, height, frames = 32, 32, 4
+        payload = bytearray()
+        for frame in range(frames):
+            for y in range(height):
+                for x in range(width):
+                    payload.extend(((x * 7 + frame * 17) % 256,
+                                    (y * 9 + frame * 23) % 256,
+                                    ((x + y) * 5 + frame * 29) % 256))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "av1-fallback.mp4"
+            encoded = subprocess.run([
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "rawvideo", "-pix_fmt", "rgb24",
+                "-s:v", f"{width}x{height}", "-r", "10", "-i", "pipe:0",
+                "-frames:v", str(frames), "-c:v", "libaom-av1", "-cpu-used", "8",
+                "-row-mt", "1", "-crf", "30", "-b:v", "0",
+                "-pix_fmt", "yuv420p", "-profile:v", "0", "-tag:v", "av01",
+                "-movflags", "+faststart", str(output),
+            ], input=bytes(payload), capture_output=True, timeout=60)
+            self.assertEqual(encoded.returncode, 0, encoded.stderr.decode(errors="replace"))
+            self.assertTrue(output.is_file() and output.stat().st_size > 0)
+            decoded = subprocess.run([
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-xerror",
+                "-i", str(output), "-map", "0:v:0", "-f", "null", "-",
+            ], capture_output=True, timeout=30)
+            self.assertEqual(decoded.returncode, 0, decoded.stderr.decode(errors="replace"))
+            self.assertFalse(decoded.stderr)
+
     def test_manual_crf_override_replaces_only_profile_crf(self):
         social = OUTPUT_PROFILES["h264_420_mp4"]
         hevc = OUTPUT_PROFILES["h265_420_mp4"]
+        av1 = OUTPUT_PROFILES["av1_420_mp4"]
         self.assertEqual(option(tuple(build_video_output_args(social)), "-crf"), "8")
         self.assertEqual(option(tuple(build_video_output_args(social, 6.5)), "-crf"), "6.5")
         self.assertEqual(option(tuple(build_video_output_args(hevc, 7)), "-crf"), "7")
+        self.assertEqual(option(tuple(build_video_output_args(av1, 12.5)), "-crf"), "12.5")
+        self.assertEqual(option(tuple(build_video_output_args(av1, 12.5)), "-b:v"), "0")
         self.assertEqual(option(social.video_args, "-crf"), "8")
         self.assertEqual(option(hevc.video_args, "-crf"), "10")
+        self.assertEqual(option(av1.video_args, "-crf"), "18")
 
     def test_manual_crf_cli_project_roundtrip_and_recipe_reset(self):
         args = build_parser().parse_args(["clip.html", "--profile", "h265_420_mp4", "--crf", "7.5"])
@@ -120,7 +171,7 @@ class QualityProfileTests(unittest.TestCase):
                     job.render.validate(for_export=False)
         job.render.video_crf = 8
         job.render.output_profile_key = "prores_hq_mov"
-        with self.assertRaisesRegex(ValueError, "H.264/H.265"):
+        with self.assertRaisesRegex(ValueError, "H.264/H.265/AV1"):
             job.render.validate(for_export=False)
 
     def test_renderer_command_uses_manual_crf_override(self):

@@ -262,7 +262,7 @@ class RenderConfig:
     scale: float = 1.0
     fps: int = 60
     output_profile_key: str = "h264_420_mp4"
-    video_crf: Optional[float] = None  # None uses the H.264/H.265 profile default.
+    video_crf: Optional[float] = None  # None uses the H.264/H.265/AV1 profile default.
     processing: ProcessingConfig = field(default_factory=ProcessingConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     overwrite: bool = False
@@ -283,8 +283,8 @@ class RenderConfig:
             crf = strict_float(self.video_crf)
             if not 1 <= crf <= 51:
                 raise ValueError('Manual CRF must be between 1 and 51.')
-            if profile.video_encoder not in {'libx264', 'libx265'} or '-crf' not in profile.video_args:
-                raise ValueError('Manual CRF override is available only for H.264/H.265 profiles.')
+            if profile.video_encoder not in {'libx264', 'libx265', 'libaom-av1'} or '-crf' not in profile.video_args:
+                raise ValueError('Manual CRF override is available only for H.264/H.265/AV1 profiles.')
         if self.processing.preset_key not in PROCESSING_PRESETS:
             raise ValueError('Unknown processing preset: ' + self.processing.preset_key)
         strict_int(self.fps)

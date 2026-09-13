@@ -384,7 +384,7 @@ class JobEditor(Toplevel):
         self.crf_widget = ttk.Spinbox(tab, from_=1, to=51, increment=0.5, textvariable=self.crf_var)
         self._row(
             tab, 4, "CRF override (1–51)", self.crf_widget,
-            "Blank = profile default. Lower is higher quality/larger. H.264/H.265 only.",
+            "Blank = profile default. Lower is higher quality/larger. H.264/H.265/AV1 only.",
         )
         self.next_to_source_check = ttk.Checkbutton(
             tab, text="Save beside source HTML",
@@ -495,7 +495,7 @@ class JobEditor(Toplevel):
         self.profile_description_var.set(OUTPUT_PROFILES[key].description if key else "")
         if key:
             profile = OUTPUT_PROFILES[key]
-            supports_crf = profile.video_encoder in {'libx264', 'libx265'} and '-crf' in profile.video_args
+            supports_crf = profile.video_encoder in {'libx264', 'libx265', 'libaom-av1'} and '-crf' in profile.video_args
             if hasattr(self, 'crf_widget'):
                 self.crf_widget.configure(state='normal' if supports_crf else 'disabled')
                 if not supports_crf:

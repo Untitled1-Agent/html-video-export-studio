@@ -205,6 +205,36 @@ OUTPUT_PROFILES: dict[str, OutputProfile] = {
         audio_args=("-c:a", "aac", "-profile:a", "aac_low", "-b:a", "256k", "-ar", "48000", "-ac", "2"),
         requires_even_dimensions=True,
     ),
+    "av1_420_mp4": OutputProfile(
+        key="av1_420_mp4",
+        label="High Efficiency — AV1 4:2:0 MP4",
+        description=(
+            "High-quality AV1 Main 8-bit delivery using libaom-av1 CRF 18 and av01 sample entries. "
+            "Compression efficiency is strong but software encoding is slower and upload/editor support "
+            "is less universal; Social delivery intentionally remains H.264 by default."
+        ),
+        extension="mp4",
+        video_encoder="libaom-av1",
+        video_args=(
+            "-noautoscale",
+            "-c:v", "libaom-av1",
+            "-cpu-used", "6",
+            "-row-mt", "1",
+            "-crf", "18",
+            "-b:v", "0",
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "0",
+            "-tag:v", "av01",
+            "-g", "120",
+            "-color_range", "tv",
+            "-color_primaries", "bt709",
+            "-color_trc", "iec61966-2-1",
+            "-colorspace", "bt709",
+        ),
+        audio_codec="aac",
+        audio_args=("-c:a", "aac", "-profile:a", "aac_low", "-b:a", "256k", "-ar", "48000", "-ac", "2"),
+        requires_even_dimensions=True,
+    ),
     "vp9_webm": OutputProfile(
         key="vp9_webm",
         label="Web — VP9 4:4:4 WebM",

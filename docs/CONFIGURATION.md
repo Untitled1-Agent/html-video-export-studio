@@ -228,6 +228,22 @@ Audio arguments:
 -c:a aac -profile:a aac_low -b:a 256k -ar 48000 -ac 2
 ```
 
+### `av1_420_mp4`
+
+High-quality AV1 Main 8-bit delivery using libaom-av1 CRF 18 and av01 sample entries. Compression efficiency is strong but software encoding is slower and upload/editor support is less universal; Social delivery intentionally remains H.264 by default.
+
+Extension: `mp4`. Alpha: `False`. Even dimensions required: `True`.
+
+Video arguments:
+```text
+-noautoscale -c:v libaom-av1 -cpu-used 6 -row-mt 1 -crf 18 -b:v 0 -pix_fmt yuv420p -profile:v 0 -tag:v av01 -g 120 -color_range tv -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709
+```
+
+Audio arguments:
+```text
+-c:a aac -profile:a aac_low -b:a 256k -ar 48000 -ac 2
+```
+
 ### `vp9_webm`
 
 High-quality open WebM output with full chroma. Useful for web delivery; encoding is slower and editing support varies.
@@ -252,7 +268,7 @@ usage: html-video-export [-h]
                          [--probe] [--deep-analysis] [--output OUTPUT] [--scale SCALE]
                          [--fps FPS] [--cpu-threads N] [--capture-workers N]
                          [--frame-buffer-mb MIB] [--no-fast-capture]
-                         [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,vp9_webm}]
+                         [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,av1_420_mp4,vp9_webm}]
                          [--crf CRF]
                          [--processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}]
                          [--capture {auto,marker,selector,viewport,full_page}]
@@ -297,8 +313,8 @@ options:
                         (default: 256).
   --no-fast-capture     Use legacy element screenshot waits instead of the guarded
                         viewport fast path.
-  --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,vp9_webm}
-  --crf CRF             Override H.264/H.265 CRF (1-51); omit to use the profile
+  --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,av1_420_mp4,vp9_webm}
+  --crf CRF             Override H.264/H.265/AV1 CRF (1-51); omit to use the profile
                         default.
   --processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}
   --capture {auto,marker,selector,viewport,full_page}

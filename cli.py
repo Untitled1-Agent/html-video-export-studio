@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Use legacy element screenshot waits instead of the guarded viewport fast path.")
     parser.add_argument("--profile", choices=OUTPUT_PROFILES)
     parser.add_argument("--crf", type=_crf, metavar="CRF",
-                        help="Override H.264/H.265 CRF (1-51); omit to use the profile default.")
+                        help="Override H.264/H.265/AV1 CRF (1-51); omit to use the profile default.")
     parser.add_argument("--processing", choices=PROCESSING_PRESETS)
     parser.add_argument("--capture", choices=[item.value for item in CaptureMode])
     parser.add_argument("--selector", default="")

@@ -77,9 +77,10 @@ The examples are self-contained demonstrations; no customer HTML, poster assets,
 | H.264 4:4:4 | MP4 | Smaller high-quality UI video | Lossy, less broadly compatible than 4:2:0 |
 | H.264 Main 4:2:0 (default) | MP4 | Mobile playback and social uploads | Chroma subsampling can soften saturated text |
 | H.265/HEVC Main 4:2:0 | MP4 | Efficient delivery where HEVC support is known | Less universal playback/upload compatibility than H.264 |
+| AV1 Main 4:2:0 | MP4 | Modern high-efficiency delivery | Slow software encoding; upload/editor support varies |
 | VP9 4:4:4 | WebM | Web-oriented delivery | Encoding speed and player/editor support vary |
 
-For H.264 and H.265/HEVC profiles, **CRF can be overridden per job** in Job Settings or with `--crf`. Leave it blank/omit the flag to use the tested profile default (Social H.264 = 8; HEVC = 10). Lower CRF means higher quality and usually larger files; the allowed override range is 1–51.
+For H.264, H.265/HEVC, and AV1 profiles, **CRF can be overridden per job** in Job Settings or with `--crf`. Leave it blank/omit the flag to use the tested profile default (Social H.264 = 8; HEVC = 10; AV1 = 18). Lower CRF means higher quality and usually larger files; the common override range is 1–51.
 
 **No processing + Lossless RGB** omits FFmpeg visual filters and preserves the captured RGB samples through encoding. With another profile, “No processing” means no enhancement; color conversion still occurs. With a filter selected, a lossless encoder preserves the *processed* pixels, not the unmodified source.
 

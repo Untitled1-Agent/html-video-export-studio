@@ -58,7 +58,16 @@ metadata, 30 Mb/s maximum rate with a 60 Mb buffer, fast-start MP4, and AAC-LC
 workflows where HEVC support has been verified. It is **not** the Social delivery
 default because browser/player/upload acceptance is less universal than H.264.
 
-Both H.264 and HEVC allow an optional per-job CRF override from 1–51. Leaving it blank keeps the tested profile default. Lower CRF raises quality and usually file size; the 30M/60M VBV guardrail still applies, so a very low manual CRF is a request for higher quality within that delivery bound rather than an uncapped mode.
+An optional **High Efficiency — AV1 4:2:0 MP4** profile uses
+`libaom-av1`, CRF 18, `cpu-used 6`, row multithreading, Main 8-bit 4:2:0,
+`av01`, the same explicit colour metadata, fast-start MP4, and AAC-LC 48 kHz
+stereo audio defaults. AV1 constant-quality mode uses `-b:v 0`; it intentionally
+does not set the H.264/HEVC 30M/60M VBV guardrail because packaged libaom rejects
+maxrate/buffer constraints when no target bitrate is set. AV1 is opt-in because
+software encoding is slower and playback/upload/editor acceptance varies more
+than H.264.
+
+H.264, HEVC, and AV1 allow an optional per-job CRF override from 1–51. Leaving it blank keeps the tested profile default. Lower CRF raises quality and usually file size. The 30M/60M VBV guardrail applies to H.264/HEVC; AV1 stays in libaom constant-quality mode without a bitrate ceiling.
 
 RGB-to-YUV conversion remains explicit: BT.709 primaries/matrix, limited YUV
 range and the screenshot's sRGB transfer. Relabelling sRGB pixels as BT.709
@@ -91,6 +100,12 @@ For opt-in HEVC:
 python cli.py source.html --recipe social_delivery --profile h265_420_mp4 --output delivery-hevc.mp4
 ```
 
+For opt-in AV1:
+
+```bash
+python cli.py source.html --recipe social_delivery --profile av1_420_mp4 --output delivery-av1.mp4
+```
+
 Keep any source-specific selector, timing-adapter and duration arguments needed
 by that source. For an archival reference, explicitly choose
 `--recipe exact_source_master`; keep a separate delivery copy for uploading.
@@ -103,8 +118,9 @@ and frame rates can exceed device capabilities; the encoder selects the actual
 codec level rather than falsely labelling arbitrary geometry as a fixed level.
 
 TikTok's Content Posting API media-transfer guide currently lists H.264 and
-H.265 as supported codecs while recommending H.264. Account duration limits and
-other upload rules also apply. These are API requirements, not certification of
+H.265 as supported codecs while recommending H.264; AV1 is not listed there, so
+this AV1 profile should not be assumed to be accepted by that API. Account duration
+limits and other upload rules also apply. These are API requirements, not certification of
 every TikTok app path. The studio does not silently resize an out-of-range
 composition to satisfy them.
 
@@ -118,7 +134,7 @@ python -m unittest discover -s tests -p test_quality_cli_media.py -v
 ```
 
 They encode and fully decode changing colours, an RGB-to-RGBA PNG transition,
-real CLI/browser H.264 and HEVC exports with external audio, GOP boundaries,
+real CLI/browser H.264, HEVC and AV1 exports with external audio, GOP boundaries,
 timestamps, MP4 box order, AAC output, edge definition and exact-master RGB
 identity. Fixtures do not substitute for live playback on every device or for a
 live social-platform upload.

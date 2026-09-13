@@ -1,4 +1,4 @@
-"""Fresh end-to-end CLI/browser/media regression for Social H.264 and HEVC."""
+"""Fresh end-to-end CLI/browser/media regression for Social H.264, HEVC, and AV1."""
 from __future__ import annotations
 
 import io
@@ -109,11 +109,13 @@ class QualityCLIMediaTests(unittest.TestCase):
         self.assertTrue(output.is_file())
         return output
 
-    def test_real_cli_browser_renders_h264_and_hevc_with_audio(self):
+    def test_real_cli_browser_renders_h264_hevc_and_av1_with_audio(self):
         h264 = self.render("h264_420_mp4", "social-h264.mp4")
         hevc = self.render("h265_420_mp4", "hevc.mp4")
+        av1 = self.render("av1_420_mp4", "av1.mp4")
         self.assert_media(h264, "h264", "avc1")
         self.assert_media(hevc, "hevc", "hvc1")
+        self.assert_media(av1, "av1", "av01")
 
 
 if __name__ == "__main__":
