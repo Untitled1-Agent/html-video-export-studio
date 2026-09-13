@@ -32,20 +32,13 @@ jobs:
           html,body{margin:0;background:#10131a;overflow:hidden}svg{display:block}
           </style></head><body>
           <svg width="360" height="640" viewBox="0 0 360 640" data-video-export xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
-                <rect width="8" height="8" fill="#111827"/><rect width="4" height="4" fill="#1f2937"/><rect x="4" y="4" width="4" height="4" fill="#1f2937"/>
-              </pattern>
-            </defs>
+            <defs><pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#111827"/><rect width="4" height="4" fill="#1f2937"/><rect x="4" y="4" width="4" height="4" fill="#1f2937"/></pattern></defs>
             <rect width="360" height="640" fill="url(#grid)"/>
-            <g id="swatches">
-              <rect x="20" y="24" width="72" height="44" fill="#ff0000"/><rect x="102" y="24" width="72" height="44" fill="#00ff00"/>
-              <rect x="184" y="24" width="72" height="44" fill="#0000ff"/><rect x="266" y="24" width="72" height="44" fill="#ffffff"/>
-            </g>
+            <g><rect x="20" y="24" width="72" height="44" fill="#ff0000"/><rect x="102" y="24" width="72" height="44" fill="#00ff00"/><rect x="184" y="24" width="72" height="44" fill="#0000ff"/><rect x="266" y="24" width="72" height="44" fill="#ffffff"/></g>
             <text id="clock" x="20" y="108" fill="white" font-size="28" font-family="Arial,sans-serif">0.000</text>
             <rect id="bar" x="20" y="132" width="80" height="28" rx="4" fill="#ff4b2b"/>
             <circle id="orb" cx="52" cy="250" r="31" fill="#34d399" stroke="white" stroke-width="2"/>
-            <path id="line" d="M20 360 L340 360" stroke="#facc15" stroke-width="1"/>
+            <path d="M20 360 L340 360" stroke="#facc15" stroke-width="1"/>
             <g id="fine"></g>
             <rect id="pulse" x="130" y="430" width="100" height="100" rx="12" fill="#111827" stroke="white" stroke-width="2"/>
             <text x="20" y="594" fill="#f9fafb" font-size="20" font-family="Arial,sans-serif">PR8 live codec validation</text>
@@ -54,16 +47,7 @@ jobs:
           <script>
           const fine=document.getElementById('fine');
           for(let i=0;i<32;i++){const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',20+(i%16)*20);r.setAttribute('y',386+Math.floor(i/16)*18);r.setAttribute('width',10);r.setAttribute('height',10);r.setAttribute('fill',i%3===0?'#22d3ee':i%3===1?'#fb7185':'#a78bfa');fine.appendChild(r)}
-          window.renderAt=t=>{
-            const x=20+240*(0.5+0.5*Math.sin(t*Math.PI*2));
-            document.getElementById('bar').setAttribute('x',x.toFixed(3));
-            document.getElementById('orb').setAttribute('cx',(52+256*((t%2)/2)).toFixed(3));
-            document.getElementById('orb').setAttribute('cy',(250+52*Math.sin(t*Math.PI*3)).toFixed(3));
-            document.getElementById('clock').textContent=t.toFixed(3);
-            const p=Math.exp(-Math.pow((t-1)/0.018,2));
-            const c=Math.round(17+238*p); document.getElementById('pulse').setAttribute('fill',`rgb(${c},${c},${c})`);
-            for(let i=0;i<fine.children.length;i++){fine.children[i].setAttribute('transform',`translate(${(9*Math.sin(t*5+i)).toFixed(2)} 0)`)}
-          };
+          window.renderAt=t=>{const x=20+240*(0.5+0.5*Math.sin(t*Math.PI*2));document.getElementById('bar').setAttribute('x',x.toFixed(3));document.getElementById('orb').setAttribute('cx',(52+256*((t%2)/2)).toFixed(3));document.getElementById('orb').setAttribute('cy',(250+52*Math.sin(t*Math.PI*3)).toFixed(3));document.getElementById('clock').textContent=t.toFixed(3);const p=Math.exp(-Math.pow((t-1)/0.018,2));const c=Math.round(17+238*p);document.getElementById('pulse').setAttribute('fill',`rgb(${c},${c},${c})`);for(let i=0;i<fine.children.length;i++){fine.children[i].setAttribute('transform',`translate(${(9*Math.sin(t*5+i)).toFixed(2)} 0)`)}};
           window.__VIDEO_EXPORT__={duration:2}; window.renderAt(0);
           </script></body></html>
           HTML
@@ -74,13 +58,9 @@ jobs:
           import math, struct, wave
           rate=48000; dur=2.0
           with wave.open('validation_out/cue.wav','wb') as w:
-              w.setparams((2,2,rate,0,'NONE','not compressed'))
-              out=bytearray()
+              w.setparams((2,2,rate,0,'NONE','not compressed')); out=bytearray()
               for i in range(round(rate*dur)):
-                  t=i/rate
-                  env=math.exp(-((t-1.0)/0.035)**2)
-                  s=int(12000*env*math.sin(2*math.pi*880*t))
-                  out += struct.pack('<hh',s,s)
+                  t=i/rate; env=math.exp(-((t-1.0)/0.035)**2); s=int(12000*env*math.sin(2*math.pi*880*t)); out += struct.pack('<hh',s,s)
               w.writeframes(out)
           PY
       - name: Fresh browser renders
@@ -111,101 +91,71 @@ jobs:
       - name: Probe, decode, timing, quality, visual samples
         run: |
           python - <<'PY'
-          import json, math, pathlib, struct, subprocess
-          from PIL import Image, ImageChops, ImageEnhance, ImageDraw
+          import json, math, pathlib, re, struct, subprocess
+          from PIL import Image, ImageChops, ImageEnhance
           root=pathlib.Path('validation_out')
           names=['reference-lossless','social-default','h264-crf8','hevc-crf10','av1-crf18','h264-crf4','hevc-crf6','av1-crf12']
-          expected={
-            'social-default':('h264','avc1','yuv420p'), 'h264-crf8':('h264','avc1','yuv420p'), 'h264-crf4':('h264','avc1','yuv420p'),
-            'hevc-crf10':('hevc','hvc1','yuv420p'), 'hevc-crf6':('hevc','hvc1','yuv420p'),
-            'av1-crf18':('av1','av01','yuv420p'), 'av1-crf12':('av1','av01','yuv420p')}
+          expected={'social-default':('h264','avc1','yuv420p'),'h264-crf8':('h264','avc1','yuv420p'),'h264-crf4':('h264','avc1','yuv420p'),'hevc-crf10':('hevc','hvc1','yuv420p'),'hevc-crf6':('hevc','hvc1','yuv420p'),'av1-crf18':('av1','av01','yuv420p'),'av1-crf12':('av1','av01','yuv420p')}
           def run(cmd, **kw): return subprocess.run(cmd, check=True, capture_output=True, **kw)
-          def ffprobe(path):
-            return json.loads(run(['ffprobe','-v','error','-count_frames','-show_streams','-show_format','-of','json',str(path)], text=True).stdout)
-          def boxes(path):
-            data=path.read_bytes(); out=[]; off=0
-            while off+8<=len(data):
-              n,k=struct.unpack_from('>I4s',data,off)
-              if n==1:
-                if off+16>len(data): break
-                n=struct.unpack_from('>Q',data,off+8)[0]
-              elif n==0: n=len(data)-off
-              if n<8 or off+n>len(data): break
-              out.append(k.decode('latin1')); off+=n
-            return out
+          def probe(p): return json.loads(run(['ffprobe','-v','error','-count_frames','-show_streams','-show_format','-of','json',str(p)],text=True).stdout)
+          def boxes(p):
+              data=p.read_bytes(); out=[]; off=0
+              while off+8<=len(data):
+                  n,k=struct.unpack_from('>I4s',data,off)
+                  if n==1:
+                      if off+16>len(data): break
+                      n=struct.unpack_from('>Q',data,off+8)[0]
+                  elif n==0: n=len(data)-off
+                  if n<8 or off+n>len(data): break
+                  out.append(k.decode('latin1')); off+=n
+              return out
           report={}
           for name in names:
-            path=root/f'{name}.mp4'; info=ffprobe(path)
-            v=next(s for s in info['streams'] if s['codec_type']=='video'); a=next(s for s in info['streams'] if s['codec_type']=='audio')
-            run(['ffmpeg','-v','error','-xerror','-i',str(path),'-map','0','-f','null','-'])
-            fs=json.loads(run(['ffprobe','-v','error','-select_streams','v:0','-show_frames','-show_entries','frame=key_frame,best_effort_timestamp_time','-of','json',str(path)], text=True).stdout)['frames']
-            pts=[float(f['best_effort_timestamp_time']) for f in fs if 'best_effort_timestamp_time' in f]
-            keys=[i for i,f in enumerate(fs) if int(f.get('key_frame',0))]
-            max_gap=max([b-a for a,b in zip(keys,keys[1:])] or [0])
-            b=boxes(path)
-            entry={
-              'bytes':path.stat().st_size,'codec':v.get('codec_name'),'tag':v.get('codec_tag_string'),'profile':v.get('profile'),'pix_fmt':v.get('pix_fmt'),
-              'fps':v.get('avg_frame_rate'),'frames':int(v.get('nb_read_frames',0)),'duration':float(info['format']['duration']),
-              'video_start':float(v.get('start_time',0) or 0),'audio_start':float(a.get('start_time',0) or 0),
-              'video_duration':float(v.get('duration',info['format']['duration'])),'audio_duration':float(a.get('duration',info['format']['duration'])),
-              'color_range':v.get('color_range'),'color_space':v.get('color_space'),'color_primaries':v.get('color_primaries'),'color_transfer':v.get('color_transfer'),
-              'audio_codec':a.get('codec_name'),'audio_profile':a.get('profile'),'audio_rate':a.get('sample_rate'),'audio_channels':a.get('channels'),
-              'faststart':('moov' in b and 'mdat' in b and b.index('moov')<b.index('mdat')),'max_keyframe_gap_frames':max_gap,
-              'strictly_monotonic_pts':all(y>x for x,y in zip(pts,pts[1:])), 'av_end_delta_ms':abs((float(v.get('duration',2)))-(float(a.get('duration',2))))*1000,
-            }
-            report[name]=entry
-            assert entry['frames']==120 and entry['fps']=='60/1' and abs(entry['duration']-2.0)<0.04
-            assert entry['strictly_monotonic_pts'] and entry['faststart'] and entry['max_keyframe_gap_frames']<=120
-            assert entry['audio_codec']=='aac' and entry['audio_profile']=='LC' and entry['audio_rate']=='48000' and entry['audio_channels']==2
-            if name in expected:
-              assert (entry['codec'],entry['tag'],entry['pix_fmt'])==expected[name], (name,entry)
-              assert (entry['color_range'],entry['color_space'],entry['color_primaries'],entry['color_transfer'])==('tv','bt709','bt709','iec61966-2-1')
-          assert report['h264-crf4']['bytes'] > report['h264-crf8']['bytes']
-          assert report['hevc-crf6']['bytes'] > report['hevc-crf10']['bytes']
-          assert report['av1-crf12']['bytes'] > report['av1-crf18']['bytes']
-          # Compare delivery codecs against identical deterministic lossless browser frames.
+              p=root/f'{name}.mp4'; info=probe(p); v=next(s for s in info['streams'] if s['codec_type']=='video'); a=next(s for s in info['streams'] if s['codec_type']=='audio')
+              run(['ffmpeg','-v','error','-xerror','-i',str(p),'-map','0','-f','null','-'])
+              fs=json.loads(run(['ffprobe','-v','error','-select_streams','v:0','-show_frames','-show_entries','frame=key_frame,best_effort_timestamp_time','-of','json',str(p)],text=True).stdout)['frames']
+              pts=[float(f['best_effort_timestamp_time']) for f in fs if 'best_effort_timestamp_time' in f]; keys=[i for i,f in enumerate(fs) if int(f.get('key_frame',0))]
+              b=boxes(p); entry={'bytes':p.stat().st_size,'codec':v.get('codec_name'),'tag':v.get('codec_tag_string'),'profile':v.get('profile'),'pix_fmt':v.get('pix_fmt'),'fps':v.get('avg_frame_rate'),'frames':int(v.get('nb_read_frames',0)),'duration':float(info['format']['duration']),'video_start':float(v.get('start_time',0) or 0),'audio_start':float(a.get('start_time',0) or 0),'video_duration':float(v.get('duration',info['format']['duration'])),'audio_duration':float(a.get('duration',info['format']['duration'])),'color_range':v.get('color_range'),'color_space':v.get('color_space'),'color_primaries':v.get('color_primaries'),'color_transfer':v.get('color_transfer'),'audio_codec':a.get('codec_name'),'audio_profile':a.get('profile'),'audio_rate':a.get('sample_rate'),'audio_channels':a.get('channels'),'faststart':('moov' in b and 'mdat' in b and b.index('moov')<b.index('mdat')),'max_keyframe_gap_frames':max([y-x for x,y in zip(keys,keys[1:])] or [0]),'strictly_monotonic_pts':all(y>x for x,y in zip(pts,pts[1:])),'av_end_delta_ms':abs(float(v.get('duration',2))-float(a.get('duration',2)))*1000}
+              report[name]=entry
+              assert entry['frames']==120 and entry['fps']=='60/1' and abs(entry['duration']-2.0)<0.04
+              assert entry['strictly_monotonic_pts'] and entry['faststart'] and entry['max_keyframe_gap_frames']<=120
+              assert entry['audio_codec']=='aac' and entry['audio_profile']=='LC' and entry['audio_rate']=='48000' and entry['audio_channels']==2
+              if name in expected:
+                  assert (entry['codec'],entry['tag'],entry['pix_fmt'])==expected[name],(name,entry)
+                  assert (entry['color_range'],entry['color_space'],entry['color_primaries'],entry['color_transfer'])==('tv','bt709','bt709','iec61966-2-1')
+          assert report['h264-crf4']['bytes']>report['h264-crf8']['bytes']; assert report['hevc-crf6']['bytes']>report['hevc-crf10']['bytes']; assert report['av1-crf12']['bytes']>report['av1-crf18']['bytes']
           quality={}
           for name in ['h264-crf8','hevc-crf10','av1-crf18','h264-crf4','hevc-crf6','av1-crf12']:
-            p=root/f'{name}.mp4'; ps=root/f'{name}.psnr.log'; ss=root/f'{name}.ssim.log'
-            r=run(['ffmpeg','-v','info','-i',str(p),'-i',str(root/'reference-lossless.mp4'),'-lavfi',f'[0:v]format=yuv444p[a];[1:v]format=yuv444p[b];[a][b]psnr=stats_file={ps},ssim=stats_file={ss}','-f','null','-'], text=True)
-            text=r.stderr
-            import re
-            pm=re.findall(r'PSNR .*average:([0-9.]+)',text); sm=re.findall(r'SSIM .*All:([0-9.]+)',text)
-            quality[name]={'psnr_db':float(pm[-1]) if pm else None,'ssim':float(sm[-1]) if sm else None}
+              p=root/f'{name}.mp4'; ref=root/'reference-lossless.mp4'
+              ps=run(['ffmpeg','-v','info','-i',str(p),'-i',str(ref),'-lavfi','[0:v]format=yuv444p[a];[1:v]format=yuv444p[b];[a][b]psnr','-f','null','-'],text=True).stderr
+              ss=run(['ffmpeg','-v','info','-i',str(p),'-i',str(ref),'-lavfi','[0:v]format=yuv444p[a];[1:v]format=yuv444p[b];[a][b]ssim','-f','null','-'],text=True).stderr
+              pm=re.findall(r'PSNR .*average:([0-9.]+)',ps); sm=re.findall(r'SSIM .*All:([0-9.]+)',ss)
+              quality[name]={'psnr_db':float(pm[-1]),'ssim':float(sm[-1])}
           report['quality_vs_lossless']=quality
-          # A/V sync marker: brightest pulse frame should be frame 60; audio RMS peak should sit at ~1 s.
+          assert quality['h264-crf4']['psnr_db']>=quality['h264-crf8']['psnr_db']; assert quality['hevc-crf6']['psnr_db']>=quality['hevc-crf10']['psnr_db']; assert quality['av1-crf12']['psnr_db']>=quality['av1-crf18']['psnr_db']
           for name in ['social-default','h264-crf8','hevc-crf10','av1-crf18']:
-            path=root/f'{name}.mp4'
-            raw=run(['ffmpeg','-v','error','-i',str(path),'-map','0:v:0','-pix_fmt','rgb24','-f','rawvideo','-']).stdout
-            W,H=360,640; stride=W*H*3; means=[]
-            for fi in range(len(raw)//stride):
-              frame=raw[fi*stride:(fi+1)*stride]; total=0; n=0
-              for y in range(450,510,6):
-                row=(y*W+150)*3
-                for x in range(150,210,6):
-                  j=row+(x-150)*3; total+=frame[j]+frame[j+1]+frame[j+2]; n+=3
-              means.append(total/n)
-            peak_frame=max(range(len(means)), key=means.__getitem__)
-            aud=run(['ffmpeg','-v','error','-i',str(path),'-map','0:a:0','-ac','1','-ar','48000','-f','s16le','-']).stdout
-            vals=struct.unpack('<'+'h'*(len(aud)//2),aud); win=480
-            rms=[]
-            for i in range(0,len(vals)-win+1,win): rms.append(math.sqrt(sum(x*x for x in vals[i:i+win])/win))
-            peak_audio=max(range(len(rms)), key=rms.__getitem__)*win/48000+win/96000
-            report[name]['sync_peak_video_frame']=peak_frame; report[name]['sync_peak_audio_s']=peak_audio
-            assert abs(peak_frame-60)<=1 and abs(peak_audio-1.0)<=0.06, (name,peak_frame,peak_audio)
-          # Contact sheets and amplified difference images for human review.
+              p=root/f'{name}.mp4'; raw=run(['ffmpeg','-v','error','-i',str(p),'-map','0:v:0','-pix_fmt','rgb24','-f','rawvideo','-']).stdout
+              W,H=360,640; stride=W*H*3; means=[]
+              for fi in range(len(raw)//stride):
+                  frame=raw[fi*stride:(fi+1)*stride]; total=0; n=0
+                  for y in range(450,510,6):
+                      for x in range(150,210,6):
+                          j=(y*W+x)*3; total+=frame[j]+frame[j+1]+frame[j+2]; n+=3
+                  means.append(total/n)
+              peak_frame=max(range(len(means)),key=means.__getitem__)
+              aud=run(['ffmpeg','-v','error','-i',str(p),'-map','0:a:0','-ac','1','-ar','48000','-f','s16le','-']).stdout; vals=struct.unpack('<'+'h'*(len(aud)//2),aud); win=480
+              rms=[math.sqrt(sum(x*x for x in vals[i:i+win])/win) for i in range(0,len(vals)-win+1,win)]; peak_audio=max(range(len(rms)),key=rms.__getitem__)*win/48000+win/96000
+              report[name]['sync_peak_video_frame']=peak_frame; report[name]['sync_peak_audio_s']=peak_audio
+              assert abs(peak_frame-60)<=1 and abs(peak_audio-1.0)<=0.06,(name,peak_frame,peak_audio)
           for name in names:
-            frames=[]
-            for idx,t in enumerate((0.0,0.5,1.0,1.5)):
-              out=root/f'{name}-t{idx}.png'
-              run(['ffmpeg','-v','error','-ss',str(t),'-i',str(root/f'{name}.mp4'),'-frames:v','1','-y',str(out)])
-              frames.append(Image.open(out).convert('RGB'))
-            sheet=Image.new('RGB',(720,1280),'black'); d=ImageDraw.Draw(sheet)
-            for idx,img in enumerate(frames): sheet.paste(img,((idx%2)*360,(idx//2)*640))
-            sheet.save(root/f'{name}-contact.png')
-            if name!='reference-lossless':
-              ref=Image.open(root/'reference-lossless-t2.png').convert('RGB'); cur=Image.open(root/f'{name}-t2.png').convert('RGB')
-              diff=ImageChops.difference(ref,cur); diff=ImageEnhance.Brightness(diff).enhance(8.0); diff.save(root/f'{name}-diff-t1s-x8.png')
+              frames=[]
+              for idx,t in enumerate((0.0,0.5,1.0,1.5)):
+                  out=root/f'{name}-t{idx}.png'; run(['ffmpeg','-v','error','-ss',str(t),'-i',str(root/f'{name}.mp4'),'-frames:v','1','-y',str(out)]); frames.append(Image.open(out).convert('RGB'))
+              sheet=Image.new('RGB',(720,1280),'black')
+              for idx,img in enumerate(frames): sheet.paste(img,((idx%2)*360,(idx//2)*640))
+              sheet.save(root/f'{name}-contact.png')
+              if name!='reference-lossless':
+                  ref=Image.open(root/'reference-lossless-t2.png').convert('RGB'); cur=Image.open(root/f'{name}-t2.png').convert('RGB'); ImageEnhance.Brightness(ImageChops.difference(ref,cur)).enhance(8).save(root/f'{name}-diff-t1s-x8.png')
           (root/'media-validation.json').write_text(json.dumps(report,indent=2))
           PY
       - name: Live H.264 / HEVC VBV stress and AV1 CQ stress
@@ -223,23 +173,17 @@ jobs:
           import json,re,subprocess,pathlib
           root=pathlib.Path('validation_out'); out={}
           def metric(codec,label):
-            path=root/f'stress-{codec}-{label}.mp4'; src='testsrc2=s=1080x1920:r=60:d=3'
-            p=subprocess.run(['ffmpeg','-v','info','-f','lavfi','-i',src,'-i',str(path),'-lavfi','[0:v]format=yuv420p[a];[1:v]format=yuv420p[b];[a][b]psnr','-f','null','-'],capture_output=True,text=True,check=True)
-            m=re.findall(r'average:([0-9.]+)',p.stderr); return {'bytes':path.stat().st_size,'psnr_db':float(m[-1])}
+              p=root/f'stress-{codec}-{label}.mp4'; src='testsrc2=s=1080x1920:r=60:d=3'; r=subprocess.run(['ffmpeg','-v','info','-f','lavfi','-i',src,'-i',str(p),'-lavfi','[0:v]format=yuv420p[a];[1:v]format=yuv420p[b];[a][b]psnr','-f','null','-'],capture_output=True,text=True,check=True); m=re.findall(r'average:([0-9.]+)',r.stderr); return {'bytes':p.stat().st_size,'psnr_db':float(m[-1])}
           for c in ('x264','x265'):
-            out[c]={k:metric(c,k) for k in ('old','current','uncapped')}
-            assert out[c]['current']['psnr_db'] > out[c]['old']['psnr_db']+1.0, out[c]
-            assert abs(out[c]['current']['psnr_db']-out[c]['uncapped']['psnr_db']) < 0.5, out[c]
-          av=root/'stress-av1-cq.mp4'
-          subprocess.run(['ffmpeg','-v','error','-xerror','-i',str(av),'-f','null','-'],check=True)
-          out['av1']={'bytes':av.stat().st_size,'full_decode':True,'mode':'CRF 18, b:v=0, no VBV'}
-          (root/'stress-validation.json').write_text(json.dumps(out,indent=2))
+              out[c]={k:metric(c,k) for k in ('old','current','uncapped')}; assert out[c]['current']['psnr_db']>out[c]['old']['psnr_db']+1; assert abs(out[c]['current']['psnr_db']-out[c]['uncapped']['psnr_db'])<0.5,out[c]
+          av=root/'stress-av1-cq.mp4'; subprocess.run(['ffmpeg','-v','error','-xerror','-i',str(av),'-f','null','-'],check=True); out['av1']={'bytes':av.stat().st_size,'full_decode':True,'mode':'CRF 18, b:v=0, no VBV'}; (root/'stress-validation.json').write_text(json.dumps(out,indent=2))
           PY
       - name: Focused PR8 regression gate
         run: |
           xvfb-run -a python -m unittest tests.test_quality_profiles tests.test_quality_cli_media tests.test_quality_ui -v
           python tools/check_docs.py
       - name: Upload review evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pr8-full-validation-evidence
