@@ -27,18 +27,11 @@
 
 - Replace fixed FFmpeg video thread counts with CPU-aware, bounded automatic pools.
 - Add per-job CPU thread controls in the desktop, CLI, and project/Python model.
-- Add dynamic queue CPU allocation so simultaneous auto-thread jobs divide the logical CPU budget; explicit per-job overrides remain unchanged.
-- Add an opt-in/automatic ordered parallel browser-capture path for independently seekable timelines; progressive timelines remain sequential and ordered output stays deterministic.
-- Add capture-worker and frame-buffer controls in desktop, CLI and project settings, plus stage timing logs and an end-to-end capture benchmark.
+- Share automatic budgets across effective queue workers without changing saved jobs.
+- Add decoded-media/queue regressions and a reproducible encoding benchmark.
+- Retain existing delivery compatibility, color conversion, and exact RGB behavior.
 
-### Audio
+## 1.5.2 — repository preparation
 
-- Add per-HTML external soundtrack attachment and deterministic filename matching for WAV, M4A, MP3 and other supported FFmpeg audio inputs.
-- Add signed audio sync offsets, loop/trim behavior, gain, fades, optional loudness normalization, bitrate/sample-rate/channel controls, and AAC-LC social delivery audio.
-- Add desktop queue/editor controls plus CLI `--audio`, `--audio-map`, and `--audio-dir` workflows.
 
-### Fixed
-
-- Preserve video duration when external audio is shorter or longer; non-looped tracks pad with silence and long tracks trim to the output timeline.
-- Reject corrupt or audio-less soundtrack files before video frame encoding begins.
-- Preserve soundtrack settings while switching video recipes and while saving/loading projects.
+See [release notes](RELEASE_NOTES_1.5.2.md) and [test report](TEST_REPORT.md).
