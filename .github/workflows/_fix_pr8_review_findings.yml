@@ -56,7 +56,32 @@ jobs:
           tests = Path('tests/test_review.py')
           text = tests.read_text(encoding='utf-8')
           test_anchor = '''    def test_iframe_font_readiness_is_awaited(self):\n'''
-          tests_new = '''    def test_uncaught_page_error_blocks_export(self):\n        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>setTimeout(()=>{throw new Error("creative exploded")},0)</script>''')\n        probe=self.renderer.probe(j)\n        self.assertTrue(any(d.code=='page_runtime_error' and d.severity=='error' and 'creative exploded' in d.message for d in probe.diagnostics))\n        with self.assertRaisesRegex(ExportError,'creative exploded'):\n            self.renderer.render(j,self.root/'page-error.mp4')\n        self.assertFalse((self.root/'page-error.mp4').exists())\n\n    def test_runtime_page_error_during_seek_blocks_export(self):\n        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".2"><rect width="80" height="40" fill="red"/></svg><script>window.seekTo=t=>{if(t>0) Promise.resolve().then(()=>{throw new Error("seek runtime exploded")})}</script>''',TimelineMode.JAVASCRIPT_FUNCTION)\n        j.render.fps=10\n        with self.assertRaisesRegex(ExportError,'seek runtime exploded'):\n            self.renderer.render(j,self.root/'seek-page-error.mp4')\n        self.assertFalse((self.root/'seek-page-error.mp4').exists())\n\n    def test_console_error_remains_warning_not_export_blocker(self):\n        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>console.error("nonfatal telemetry")</script>''')\n        probe=self.renderer.probe(j)\n        self.assertTrue(any(d.code=='browser_errors' and d.severity=='warning' and 'nonfatal telemetry' in d.message for d in probe.diagnostics))\n        self.assertFalse(any(d.severity=='error' for d in probe.diagnostics))\n        out=self.root/'console-error-warning.mp4'\n        self.renderer.render(j,out)\n        self.assertTrue(out.is_file() and out.stat().st_size>0)\n\n    def test_iframe_font_readiness_is_awaited(self):\n'''
+          tests_new = """    def test_uncaught_page_error_blocks_export(self):
+        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>setTimeout(()=>{throw new Error("creative exploded")},0)</script>''')
+        probe=self.renderer.probe(j)
+        self.assertTrue(any(d.code=='page_runtime_error' and d.severity=='error' and 'creative exploded' in d.message for d in probe.diagnostics))
+        with self.assertRaisesRegex(ExportError,'creative exploded'):
+            self.renderer.render(j,self.root/'page-error.mp4')
+        self.assertFalse((self.root/'page-error.mp4').exists())
+
+    def test_runtime_page_error_during_seek_blocks_export(self):
+        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".2"><rect width="80" height="40" fill="red"/></svg><script>window.seekTo=t=>{if(t>0) Promise.resolve().then(()=>{throw new Error("seek runtime exploded")})}</script>''',TimelineMode.JAVASCRIPT_FUNCTION)
+        j.render.fps=10
+        with self.assertRaisesRegex(ExportError,'seek runtime exploded'):
+            self.renderer.render(j,self.root/'seek-page-error.mp4')
+        self.assertFalse((self.root/'seek-page-error.mp4').exists())
+
+    def test_console_error_remains_warning_not_export_blocker(self):
+        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>console.error("nonfatal telemetry")</script>''')
+        probe=self.renderer.probe(j)
+        self.assertTrue(any(d.code=='browser_errors' and d.severity=='warning' and 'nonfatal telemetry' in d.message for d in probe.diagnostics))
+        self.assertFalse(any(d.severity=='error' for d in probe.diagnostics))
+        out=self.root/'console-error-warning.mp4'
+        self.renderer.render(j,out)
+        self.assertTrue(out.is_file() and out.stat().st_size>0)
+
+    def test_iframe_font_readiness_is_awaited(self):
+"""
           if test_anchor not in text:
               raise SystemExit('test insertion anchor not found')
           text = text.replace(test_anchor, tests_new, 1)
