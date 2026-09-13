@@ -262,6 +262,7 @@ class RenderConfig:
     scale: float = 1.0
     fps: int = 60
     output_profile_key: str = "h264_420_mp4"
+    video_crf: Optional[float] = None  # None uses the H.264/H.265 profile default.
     processing: ProcessingConfig = field(default_factory=ProcessingConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     overwrite: bool = False
@@ -277,6 +278,13 @@ class RenderConfig:
         from presets import OUTPUT_PROFILES, PROCESSING_PRESETS
         if self.output_profile_key not in OUTPUT_PROFILES:
             raise ValueError('Unknown output profile: ' + self.output_profile_key)
+        profile = OUTPUT_PROFILES[self.output_profile_key]
+        if self.video_crf is not None:
+            crf = strict_float(self.video_crf)
+            if not 0 <= crf <= 51:
+                raise ValueError('Manual CRF must be between 0 and 51.')
+            if profile.video_encoder not in {'libx264', 'libx265'} or '-crf' not in profile.video_args:
+                raise ValueError('Manual CRF override is available only for H.264/H.265 profiles.')
         if self.processing.preset_key not in PROCESSING_PRESETS:
             raise ValueError('Unknown processing preset: ' + self.processing.preset_key)
         strict_int(self.fps)
@@ -522,6 +530,11 @@ def job_config_from_dict(data: dict[str, Any]) -> JobConfig:
     render = RenderConfig(
         scale=strict_float(render_data.get("scale", render_base.scale)),
         fps=strict_int(render_data.get("fps", render_base.fps)),
+        video_crf=(
+            strict_float(render_data["video_crf"])
+            if render_data.get("video_crf") not in (None, "")
+            else None
+        ),
         cpu_threads=strict_int(render_data.get("cpu_threads", render_base.cpu_threads)),
         capture_workers=strict_int(render_data.get("capture_workers", render_base.capture_workers)),
         frame_buffer_mb=strict_int(render_data.get("frame_buffer_mb", render_base.frame_buffer_mb)),

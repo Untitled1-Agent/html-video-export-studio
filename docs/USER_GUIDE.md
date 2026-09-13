@@ -24,6 +24,8 @@ Double-click/edit a job to choose the capture target, selector index, viewport, 
 
 Scale supports 0.25×–4×. Fractional scale uses Chromium-style pixel rounding. Frame rate is an integer 1–240; 29.97/59.94 rational rates are not currently represented by the model. Higher capture fps does not synthesize motion in a video/raster asset authored at a lower rate.
 
+For H.264 and H.265/HEVC output profiles, **CRF override** is optional per job. Leave the field blank to use the profile default (Social H.264 = 8; HEVC = 10). Lower values increase quality and usually file size. Overrides are validated from 0 through 51 and are deliberately unavailable for ProRes, VP9, and the exact RGB master. Applying a recipe clears a manual CRF because recipes reset codec settings.
+
 ## Test frame versus Compare
 
 Test frame creates a native-size PNG. The default position is halfway through the detected source duration; the Python API can choose a specific source timestamp. It is a source-time preview, not a proof of the trimmed movie's entire timeline. Compare creates a labelled, fit-to-panel source/processed inspection image. It can resize panels for display, so use the native PNG at 100% for fine-edge judgement.

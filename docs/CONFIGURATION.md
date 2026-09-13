@@ -50,6 +50,7 @@ Use the desktop Job Settings or the Python API for the complete model. The CLI e
 | `scale` | `float` | `1.0` |
 | `fps` | `int` | `60` |
 | `output_profile_key` | `str` | `"h264_420_mp4"` |
+| `video_crf` | `Optional[float]` | `null` |
 | `processing` | `ProcessingConfig` | `(nested settings)` |
 | `audio` | `AudioConfig` | `(nested settings)` |
 | `overwrite` | `bool` | `false` |
@@ -252,6 +253,7 @@ usage: html-video-export [-h]
                          [--fps FPS] [--cpu-threads N] [--capture-workers N]
                          [--frame-buffer-mb MIB] [--no-fast-capture]
                          [--profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,vp9_webm}]
+                         [--crf CRF]
                          [--processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}]
                          [--capture {auto,marker,selector,viewport,full_page}]
                          [--selector SELECTOR]
@@ -296,6 +298,8 @@ options:
   --no-fast-capture     Use legacy element screenshot waits instead of the guarded
                         viewport fast path.
   --profile {lossless_rgb_mp4,prores_4444_mov,prores_hq_mov,h264_444_mp4,h264_420_mp4,h265_420_mp4,vp9_webm}
+  --crf CRF             Override H.264/H.265 CRF (0-51); omit to use the profile
+                        default.
   --processing {auto_content_aware,no_processing,ui_subtle,ui_balanced,photo_gentle,social_compensation,custom}
   --capture {auto,marker,selector,viewport,full_page}
   --selector SELECTOR

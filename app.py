@@ -222,6 +222,7 @@ class JobEditor(Toplevel):
         self.frame_buffer_var = StringVar(value=str(config.render.frame_buffer_mb))
         self.fast_capture_var = BooleanVar(value=config.render.fast_capture)
         self.profile_var = StringVar(value=OUTPUT_PROFILES[config.render.output_profile_key].label)
+        self.crf_var = StringVar(value="" if config.render.video_crf is None else f"{config.render.video_crf:g}")
         self.next_to_source_var = BooleanVar(value=config.render.save_next_to_source)
         self.output_dir_var = StringVar(value=config.render.output_directory)
         self.overwrite_var = BooleanVar(value=config.render.overwrite)
@@ -380,11 +381,16 @@ class JobEditor(Toplevel):
         ttk.Label(tab, textvariable=self.profile_description_var, wraplength=620).grid(
             row=3, column=1, columnspan=2, sticky="w", padx=(12, 8), pady=(0, 8)
         )
+        self.crf_widget = ttk.Spinbox(tab, from_=0, to=51, increment=0.5, textvariable=self.crf_var)
+        self._row(
+            tab, 4, "CRF override (0–51)", self.crf_widget,
+            "Blank = profile default. Lower is higher quality/larger. H.264/H.265 only.",
+        )
         self.next_to_source_check = ttk.Checkbutton(
             tab, text="Save beside source HTML",
             variable=self.next_to_source_var, command=self._toggle_output
         )
-        self.next_to_source_check.grid(row=4, column=1, sticky="w", padx=(12, 8), pady=5)
+        self.next_to_source_check.grid(row=5, column=1, sticky="w", padx=(12, 8), pady=5)
         if self.job.config.source.kind == SourceKind.URL:
             self.next_to_source_var.set(False)
             self.next_to_source_check.configure(state="disabled")
@@ -394,11 +400,11 @@ class JobEditor(Toplevel):
         self.output_entry_widget.grid(row=0, column=0, sticky="ew")
         self.output_browse_widget = ttk.Button(output_row, text="Browse…", command=self._browse_output)
         self.output_browse_widget.grid(row=0, column=1, padx=(6, 0))
-        self._row(tab, 5, "Output folder", output_row)
-        self._row(tab, 6, "Filename template", ttk.Entry(tab, textvariable=self.filename_var), "Fields: {stem}, {scale}, {fps}, {profile}, {processing}, {ext}")
-        ttk.Checkbutton(tab, text="Overwrite existing output", variable=self.overwrite_var).grid(row=7, column=1, sticky="w", padx=(12, 8), pady=5)
+        self._row(tab, 6, "Output folder", output_row)
+        self._row(tab, 7, "Filename template", ttk.Entry(tab, textvariable=self.filename_var), "Fields: {stem}, {scale}, {fps}, {profile}, {processing}, {ext}")
+        ttk.Checkbutton(tab, text="Overwrite existing output", variable=self.overwrite_var).grid(row=8, column=1, sticky="w", padx=(12, 8), pady=5)
         from models import MAX_CPU_THREADS
-        self._row(tab, 8, "CPU threads per export",
+        self._row(tab, 9, "CPU threads per export",
                   ttk.Spinbox(tab, from_=0, to=MAX_CPU_THREADS, textvariable=self.cpu_threads_var),
                   "0 = automatic, shared across queue workers. Higher values use more CPU/RAM.")
 
@@ -487,6 +493,13 @@ class JobEditor(Toplevel):
     def _update_profile_description(self) -> None:
         key = OUTPUT_PROFILE_LABEL_TO_KEY.get(self.profile_var.get())
         self.profile_description_var.set(OUTPUT_PROFILES[key].description if key else "")
+        if key:
+            profile = OUTPUT_PROFILES[key]
+            supports_crf = profile.video_encoder in {'libx264', 'libx265'} and '-crf' in profile.video_args
+            if hasattr(self, 'crf_widget'):
+                self.crf_widget.configure(state='normal' if supports_crf else 'disabled')
+                if not supports_crf:
+                    self.crf_var.set('')
         if key and hasattr(self, "audio_encoding_var"):
             profile = OUTPUT_PROFILES[key]
             codec = {"aac": "AAC-LC", "libopus": "Opus", "pcm_s24le": "24-bit PCM"}.get(profile.audio_codec, profile.audio_codec)
@@ -547,6 +560,7 @@ class JobEditor(Toplevel):
         self.scale_var.set(fresh.render.scale)
         self.fps_var.set(fresh.render.fps)
         self.profile_var.set(OUTPUT_PROFILES[fresh.render.output_profile_key].label)
+        self.crf_var.set("" if fresh.render.video_crf is None else f"{fresh.render.video_crf:g}")
         self.processing_var.set(PROCESSING_PRESETS[fresh.render.processing.preset_key].label)
         self._update_profile_description()
 
@@ -593,6 +607,7 @@ class JobEditor(Toplevel):
             config.render.frame_buffer_mb = int(self.frame_buffer_var.get())
             config.render.fast_capture = bool(self.fast_capture_var.get())
             config.render.output_profile_key = OUTPUT_PROFILE_LABEL_TO_KEY[self.profile_var.get()]
+            config.render.video_crf = self._optional_float(self.crf_var.get())
             config.render.save_next_to_source = bool(self.next_to_source_var.get())
             config.render.output_directory = self.output_dir_var.get().strip()
             config.render.overwrite = bool(self.overwrite_var.get())

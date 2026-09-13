@@ -79,6 +79,8 @@ The examples are self-contained demonstrations; no customer HTML, poster assets,
 | H.265/HEVC Main 4:2:0 | MP4 | Efficient delivery where HEVC support is known | Less universal playback/upload compatibility than H.264 |
 | VP9 4:4:4 | WebM | Web-oriented delivery | Encoding speed and player/editor support vary |
 
+For H.264 and H.265/HEVC profiles, **CRF can be overridden per job** in Job Settings or with `--crf`. Leave it blank/omit the flag to use the tested profile default (Social H.264 = 8; HEVC = 10). Lower CRF means higher quality and usually larger files; the allowed override range is 0–51.
+
 **No processing + Lossless RGB** omits FFmpeg visual filters and preserves the captured RGB samples through encoding. With another profile, “No processing” means no enhancement; color conversion still occurs. With a filter selected, a lossless encoder preserves the *processed* pixels, not the unmodified source.
 
 The PNG capture path is 8-bit browser output. It is not an HDR/wide-gamut archival pipeline. Frame comparisons are fit-to-window inspection images; inspect an exported PNG at 100% to judge native edges. [Presets and algorithms](docs/PRESETS_AND_ALGORITHMS.md) explains the exact settings.

@@ -1794,7 +1794,7 @@ class HtmlVideoRenderer:
     ) -> list[str]:
         ffmpeg = getattr(self, '_ffmpeg_exe', None) or get_ffmpeg_executable()
         profile = OUTPUT_PROFILES[job.render.output_profile_key]
-        from media_pipeline import color_pipeline, ffmpeg_thread_plan
+        from media_pipeline import color_pipeline, ffmpeg_thread_plan, build_video_output_args
         threads = ffmpeg_thread_plan(job.render.cpu_threads)
         _log(getattr(self, 'log_callback', None),
              f'FFmpeg CPU threads: encoder={threads.encoder}, filters={threads.filters}, decoder={threads.decoder}.')
@@ -1824,7 +1824,7 @@ class HtmlVideoRenderer:
             command.extend(["-map", "1:a:0"])
         if filter_chain:
             command.extend(["-vf", filter_chain])
-        command.extend(profile.video_args)
+        command.extend(build_video_output_args(profile, job.render.video_crf))
         command.extend(['-threads:v', str(threads.encoder)])
 
         if has_audio:

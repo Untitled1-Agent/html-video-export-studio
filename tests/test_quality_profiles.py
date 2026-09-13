@@ -7,7 +7,11 @@ from pathlib import Path
 
 import imageio_ffmpeg
 
-from presets import OUTPUT_PROFILES, RECIPES
+from cli import build_parser, make_job
+from media_pipeline import build_video_output_args
+from models import dataclass_to_dict, job_config_from_dict
+from presets import OUTPUT_PROFILES, RECIPES, apply_recipe
+from renderer import HtmlVideoRenderer
 
 
 def option(args: tuple[str, ...], flag: str) -> str:
@@ -86,6 +90,46 @@ class QualityProfileTests(unittest.TestCase):
             )
             self.assertEqual(decoded.returncode, 0, decoded.stderr.decode(errors="replace"))
             self.assertFalse(decoded.stderr)
+
+    def test_manual_crf_override_replaces_only_profile_crf(self):
+        social = OUTPUT_PROFILES["h264_420_mp4"]
+        hevc = OUTPUT_PROFILES["h265_420_mp4"]
+        self.assertEqual(option(tuple(build_video_output_args(social)), "-crf"), "8")
+        self.assertEqual(option(tuple(build_video_output_args(social, 6.5)), "-crf"), "6.5")
+        self.assertEqual(option(tuple(build_video_output_args(hevc, 7)), "-crf"), "7")
+        self.assertEqual(option(social.video_args, "-crf"), "8")
+        self.assertEqual(option(hevc.video_args, "-crf"), "10")
+
+    def test_manual_crf_cli_project_roundtrip_and_recipe_reset(self):
+        args = build_parser().parse_args(["clip.html", "--profile", "h265_420_mp4", "--crf", "7.5"])
+        job = make_job("clip.html", args)
+        self.assertEqual(job.render.video_crf, 7.5)
+        payload = dataclass_to_dict(job)
+        restored = job_config_from_dict(payload)
+        self.assertEqual(restored.render.video_crf, 7.5)
+        del payload["render"]["video_crf"]
+        self.assertIsNone(job_config_from_dict(payload).render.video_crf)
+        self.assertIsNone(apply_recipe(restored, "social_delivery").render.video_crf)
+
+    def test_manual_crf_validation_rejects_bad_values_and_non_h26x_profiles(self):
+        job = RECIPES["social_delivery"].create_job("clip.html")
+        for value in (-1, 51.1, float("nan"), True):
+            with self.subTest(value=value):
+                job.render.video_crf = value
+                with self.assertRaises(ValueError):
+                    job.render.validate(for_export=False)
+        job.render.video_crf = 8
+        job.render.output_profile_key = "prores_hq_mov"
+        with self.assertRaisesRegex(ValueError, "H.264/H.265"):
+            job.render.validate(for_export=False)
+
+    def test_renderer_command_uses_manual_crf_override(self):
+        job = RECIPES["social_delivery"].create_job("clip.html")
+        job.render.video_crf = 5.5
+        renderer = HtmlVideoRenderer()
+        renderer._ffmpeg_exe = "ffmpeg"
+        command = renderer._build_ffmpeg_command(job, Path("out.mp4"), 1.0, "")
+        self.assertEqual(command[command.index("-crf") + 1], "5.5")
 
 
 if __name__ == "__main__":
