@@ -1,0 +1,97 @@
+name: Fix PR8 review findings
+on:
+  push:
+    branches: [feat/social-crf-x265-quality]
+permissions:
+  contents: write
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/social-crf-x265-quality
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb ffmpeg
+          python -m pip install -r requirements-dev.txt
+          python -m playwright install --with-deps chromium
+      - name: Apply review fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          renderer = Path('renderer.py')
+          text = renderer.read_text(encoding='utf-8')
+          old = '''            if loaded.console_errors or loaded.page_errors:\n                messages = (loaded.page_errors + loaded.console_errors)[-5:]\n                diagnostics.append(\n                    Diagnostic(\n                        "warning",\n                        "browser_errors",\n                        "The source logged browser errors: " + " | ".join(messages),\n                    )\n                )\n'''
+          new = '''            if loaded.page_errors:\n                diagnostics.append(\n                    Diagnostic(\n                        "error",\n                        "page_runtime_error",\n                        "The source raised uncaught JavaScript errors: "\n                        + " | ".join(loaded.page_errors[-5:])\n                        + ". Export stopped to avoid capturing a broken or error-overlay state.",\n                    )\n                )\n            if loaded.console_errors:\n                diagnostics.append(\n                    Diagnostic(\n                        "warning",\n                        "browser_errors",\n                        "The source logged browser console errors: "\n                        + " | ".join(loaded.console_errors[-5:]),\n                    )\n                )\n'''
+          if old not in text:
+              raise SystemExit('renderer diagnostics anchor not found')
+          text = text.replace(old, new, 1)
+
+          anchor = '''    def _capture_frame(self, prepared: PreparedSource, job: JobConfig) -> bytes:\n        target = prepared.target\n        page = prepared.loaded.page\n'''
+          replacement = '''    def _raise_page_errors(self, loaded: LoadedSource) -> None:\n        if loaded.page_errors:\n            raise ExportError(\n                "Source JavaScript runtime error: "\n                + " | ".join(loaded.page_errors[-5:])\n                + ". Fix the source error before exporting."\n            )\n\n    def _capture_frame(self, prepared: PreparedSource, job: JobConfig) -> bytes:\n        self._raise_page_errors(prepared.loaded)\n        target = prepared.target\n        page = prepared.loaded.page\n'''
+          if anchor not in text:
+              raise SystemExit('capture-frame anchor not found')
+          text = text.replace(anchor, replacement, 1)
+
+          geom = '''                data = screenshot(\n                    type="png",\n                    scale="device",\n                    caret="hide",\n                    omit_background=job.capture.transparent_background,\n                    timeout=self.page_timeout_ms,\n                )\n                last_actual = png_dimensions(data)\n'''
+          geom_new = '''                data = screenshot(\n                    type="png",\n                    scale="device",\n                    caret="hide",\n                    omit_background=job.capture.transparent_background,\n                    timeout=self.page_timeout_ms,\n                )\n                self._raise_page_errors(prepared.loaded)\n                last_actual = png_dimensions(data)\n'''
+          if geom not in text:
+              raise SystemExit('geometry screenshot anchor not found')
+          text = text.replace(geom, geom_new, 1)
+
+          common = '''        actual = png_dimensions(data)\n        expected = (prepared.output_width, prepared.output_height)\n'''
+          common_new = '''        self._raise_page_errors(prepared.loaded)\n        actual = png_dimensions(data)\n        expected = (prepared.output_width, prepared.output_height)\n'''
+          if common not in text:
+              raise SystemExit('common screenshot anchor not found')
+          text = text.replace(common, common_new, 1)
+          renderer.write_text(text, encoding='utf-8')
+
+          tests = Path('tests/test_review.py')
+          text = tests.read_text(encoding='utf-8')
+          test_anchor = '''    def test_iframe_font_readiness_is_awaited(self):\n'''
+          tests_new = '''    def test_uncaught_page_error_blocks_export(self):\n        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>setTimeout(()=>{throw new Error("creative exploded")},0)</script>''')\n        probe=self.renderer.probe(j)\n        self.assertTrue(any(d.code=='page_runtime_error' and d.severity=='error' and 'creative exploded' in d.message for d in probe.diagnostics))\n        with self.assertRaisesRegex(ExportError,'creative exploded'):\n            self.renderer.render(j,self.root/'page-error.mp4')\n        self.assertFalse((self.root/'page-error.mp4').exists())\n\n    def test_runtime_page_error_during_seek_blocks_export(self):\n        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".2"><rect width="80" height="40" fill="red"/></svg><script>window.seekTo=t=>{if(t>0) Promise.resolve().then(()=>{throw new Error("seek runtime exploded")})}</script>''',TimelineMode.JAVASCRIPT_FUNCTION)\n        j.render.fps=10\n        with self.assertRaisesRegex(ExportError,'seek runtime exploded'):\n            self.renderer.render(j,self.root/'seek-page-error.mp4')\n        self.assertFalse((self.root/'seek-page-error.mp4').exists())\n\n    def test_console_error_remains_warning_not_export_blocker(self):\n        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>console.error("nonfatal telemetry")</script>''')\n        probe=self.renderer.probe(j)\n        self.assertTrue(any(d.code=='browser_errors' and d.severity=='warning' and 'nonfatal telemetry' in d.message for d in probe.diagnostics))\n        self.assertFalse(any(d.severity=='error' for d in probe.diagnostics))\n        out=self.root/'console-error-warning.mp4'\n        self.renderer.render(j,out)\n        self.assertTrue(out.is_file() and out.stat().st_size>0)\n\n    def test_iframe_font_readiness_is_awaited(self):\n'''
+          if test_anchor not in text:
+              raise SystemExit('test insertion anchor not found')
+          text = text.replace(test_anchor, tests_new, 1)
+          tests.write_text(text, encoding='utf-8')
+
+          guide = Path('docs/USER_GUIDE.md')
+          text = guide.read_text(encoding='utf-8')
+          old = 'Errors block export. Warnings deserve inspection: low raster density means assets contain too few pixels for the requested size; very large frames warn of memory use; real-time timing warns about missed states; browser console warnings can reveal missing network assets. The app is not a complete asset-health checker for every loading pattern. A visually wrong preview must not be treated as a passing export merely because no exception occurred.'
+          new = 'Errors block export. Uncaught JavaScript page/runtime errors are treated as errors and stop export, including errors that occur during seek/capture, so a source-generated error overlay is not silently encoded. Plain browser `console.error` messages remain warnings because some pages log non-fatal telemetry there. Other warnings deserve inspection: low raster density means assets contain too few pixels for the requested size; very large frames warn of memory use; real-time timing warns about missed states; browser console warnings can reveal missing network assets. The app is not a complete asset-health checker for every loading pattern. A visually wrong preview must not be treated as a passing export merely because no exception occurred.'
+          if old not in text:
+              raise SystemExit('user-guide error-policy anchor not found')
+          guide.write_text(text.replace(old,new,1), encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          anchor = '- Add an opt-in AV1 Main 8-bit 4:2:0 MP4 profile using portable `libaom-av1`, CRF 18, `av01`, fast-start MP4, explicit BT.709/sRGB metadata, and AAC-LC audio.\n'
+          addition = anchor + '- Treat uncaught JavaScript page/runtime errors as export-blocking source validation failures, including errors raised during seek/capture; keep plain `console.error` output as a non-blocking warning.\n'
+          if anchor not in text:
+              raise SystemExit('changelog anchor not found')
+          changelog.write_text(text.replace(anchor,addition,1), encoding='utf-8')
+          PY
+      - name: Focused browser regression
+        run: xvfb-run -a python -m unittest discover -s tests -p test_review.py -v
+      - name: Quality regression
+        run: xvfb-run -a python -m unittest discover -s tests -p 'test_quality*.py' -v
+      - name: Documentation consistency
+        run: python tools/check_docs.py
+      - name: Commit permanent fixes
+        run: |
+          git config user.name 'Untitled1-Agent'
+          git config user.email 'untitled1-openclaw@protonmail.com'
+          git add renderer.py tests/test_review.py docs/USER_GUIDE.md CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo 'No product changes to commit.'
+          else
+            git commit -m 'Block exports on uncaught source runtime errors'
+            git push origin HEAD:feat/social-crf-x265-quality
+          fi
