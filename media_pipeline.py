@@ -441,8 +441,8 @@ def build_video_output_args(profile: OutputProfile, crf_override: float | None =
         return args
     from models import strict_float
     crf = strict_float(crf_override)
-    if not 0 <= crf <= 51:
-        raise ValueError('Manual CRF must be between 0 and 51.')
+    if not 1 <= crf <= 51:
+        raise ValueError('Manual CRF must be between 1 and 51.')
     if profile.video_encoder not in {'libx264', 'libx265'} or '-crf' not in args:
         raise ValueError('Manual CRF override is available only for H.264/H.265 profiles.')
     index = args.index('-crf')

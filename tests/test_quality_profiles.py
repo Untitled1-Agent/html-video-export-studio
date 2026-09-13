@@ -113,7 +113,7 @@ class QualityProfileTests(unittest.TestCase):
 
     def test_manual_crf_validation_rejects_bad_values_and_non_h26x_profiles(self):
         job = RECIPES["social_delivery"].create_job("clip.html")
-        for value in (-1, 51.1, float("nan"), True):
+        for value in (0, -1, 51.1, float("nan"), True):
             with self.subTest(value=value):
                 job.render.video_crf = value
                 with self.assertRaises(ValueError):

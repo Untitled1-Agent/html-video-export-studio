@@ -58,7 +58,7 @@ metadata, 30 Mb/s maximum rate with a 60 Mb buffer, fast-start MP4, and AAC-LC
 workflows where HEVC support has been verified. It is **not** the Social delivery
 default because browser/player/upload acceptance is less universal than H.264.
 
-Both H.264 and HEVC allow an optional per-job CRF override from 0–51. Leaving it blank keeps the tested profile default. Lower CRF raises quality and usually file size; the 30M/60M VBV guardrail still applies, so a very low manual CRF is a request for higher quality within that delivery bound rather than an uncapped mode.
+Both H.264 and HEVC allow an optional per-job CRF override from 1–51. Leaving it blank keeps the tested profile default. Lower CRF raises quality and usually file size; the 30M/60M VBV guardrail still applies, so a very low manual CRF is a request for higher quality within that delivery bound rather than an uncapped mode.
 
 RGB-to-YUV conversion remains explicit: BT.709 primaries/matrix, limited YUV
 range and the screenshot's sRGB transfer. Relabelling sRGB pixels as BT.709

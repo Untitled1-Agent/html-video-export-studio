@@ -381,9 +381,9 @@ class JobEditor(Toplevel):
         ttk.Label(tab, textvariable=self.profile_description_var, wraplength=620).grid(
             row=3, column=1, columnspan=2, sticky="w", padx=(12, 8), pady=(0, 8)
         )
-        self.crf_widget = ttk.Spinbox(tab, from_=0, to=51, increment=0.5, textvariable=self.crf_var)
+        self.crf_widget = ttk.Spinbox(tab, from_=1, to=51, increment=0.5, textvariable=self.crf_var)
         self._row(
-            tab, 4, "CRF override (0–51)", self.crf_widget,
+            tab, 4, "CRF override (1–51)", self.crf_widget,
             "Blank = profile default. Lower is higher quality/larger. H.264/H.265 only.",
         )
         self.next_to_source_check = ttk.Checkbutton(

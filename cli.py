@@ -53,8 +53,8 @@ def _crf(value: str) -> float:
         crf = float(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError("CRF must be a number.") from exc
-    if not math.isfinite(crf) or not 0 <= crf <= 51:
-        raise argparse.ArgumentTypeError("CRF must be between 0 and 51.")
+    if not math.isfinite(crf) or not 1 <= crf <= 51:
+        raise argparse.ArgumentTypeError("CRF must be between 1 and 51.")
     return crf
 
 
@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Use legacy element screenshot waits instead of the guarded viewport fast path.")
     parser.add_argument("--profile", choices=OUTPUT_PROFILES)
     parser.add_argument("--crf", type=_crf, metavar="CRF",
-                        help="Override H.264/H.265 CRF (0-51); omit to use the profile default.")
+                        help="Override H.264/H.265 CRF (1-51); omit to use the profile default.")
     parser.add_argument("--processing", choices=PROCESSING_PRESETS)
     parser.add_argument("--capture", choices=[item.value for item in CaptureMode])
     parser.add_argument("--selector", default="")

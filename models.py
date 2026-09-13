@@ -281,8 +281,8 @@ class RenderConfig:
         profile = OUTPUT_PROFILES[self.output_profile_key]
         if self.video_crf is not None:
             crf = strict_float(self.video_crf)
-            if not 0 <= crf <= 51:
-                raise ValueError('Manual CRF must be between 0 and 51.')
+            if not 1 <= crf <= 51:
+                raise ValueError('Manual CRF must be between 1 and 51.')
             if profile.video_encoder not in {'libx264', 'libx265'} or '-crf' not in profile.video_args:
                 raise ValueError('Manual CRF override is available only for H.264/H.265 profiles.')
         if self.processing.preset_key not in PROCESSING_PRESETS:
