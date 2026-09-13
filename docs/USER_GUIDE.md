@@ -4,7 +4,7 @@
 
 ## Choose the right path
 
-For authored motion graphics, use **Exact source master** as the baseline: 2× browser rasterization, 60 fps, lossless RGB, No processing. For a browser/player-friendly copy choose Social delivery, then inspect its default sharpening and chroma tradeoff. For transparency choose ProRes 4444, transparent capture, and No processing. For a webpage with no natural endpoint explicitly choose a duration and a suitable timing adapter.
+For authored motion graphics, use **Exact source master** as the baseline: 2× browser rasterization, 60 fps, lossless RGB, No processing. For the broadest browser/player/social compatibility choose Social delivery, then inspect its default sharpening and chroma tradeoff. Choose **High Efficiency — H.265/HEVC 4:2:0 MP4** only for controlled destinations where HEVC support is known. For transparency choose ProRes 4444, transparent capture, and No processing. For a webpage with no natural endpoint explicitly choose a duration and a suitable timing adapter.
 
 Recipes are starting configurations, not automatic fixes for incompatible HTML. The [generated configuration reference](CONFIGURATION.md) lists their exact keys and defaults. The new-job default is **Social delivery — Sharp compatible MP4 (default)**: 1× / 60 fps H.264 Main 4:2:0 with explicit CAS 0.28 sharpening. Exact source master remains an opt-in unfiltered reference recipe. See [delivery compatibility](DELIVERY_COMPATIBILITY.md) for VLC/Android/TikTok guidance, the one-time legacy-default migration, and how to re-render existing jobs without resetting their timing settings.
 
