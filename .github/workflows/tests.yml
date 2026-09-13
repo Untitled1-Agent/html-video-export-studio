@@ -58,5 +58,7 @@ jobs:
         run: python -m unittest discover -s tests -p test_core.py -v
       - name: Portable audio settings and pairing
         run: python -m unittest discover -s tests -p test_audio_core.py -v
+      - name: Portable delivery codec smoke
+        run: python -m unittest discover -s tests -p test_quality_profiles.py -v
       - run: python tools/check_docs.py
       - run: python -m build
