@@ -294,6 +294,30 @@ class ReviewBrowserTests(unittest.TestCase):
         with self.assertRaisesRegex(ExportError,'local assets'):
             self.renderer.render(j,self.root/'missing_assets.mp4')
 
+    def test_uncaught_page_error_blocks_export(self):
+        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>throw new Error("creative exploded")</script>''')
+        probe=self.renderer.probe(j)
+        self.assertTrue(any(d.code=='page_runtime_error' and d.severity=='error' and 'creative exploded' in d.message for d in probe.diagnostics))
+        with self.assertRaisesRegex(ExportError,'creative exploded'):
+            self.renderer.render(j,self.root/'page-error.mp4')
+        self.assertFalse((self.root/'page-error.mp4').exists())
+
+    def test_runtime_page_error_during_seek_blocks_export(self):
+        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".2"><rect width="80" height="40" fill="red"/></svg><script>window.seekTo=t=>{if(t>0) Promise.resolve().then(()=>{throw new Error("seek runtime exploded")})}</script>''',TimelineMode.JAVASCRIPT_FUNCTION)
+        j.render.fps=10
+        with self.assertRaisesRegex(ExportError,'seek runtime exploded'):
+            self.renderer.render(j,self.root/'seek-page-error.mp4')
+        self.assertFalse((self.root/'seek-page-error.mp4').exists())
+
+    def test_console_error_remains_warning_not_export_blocker(self):
+        j=self.job('''<svg width="80" height="40" data-video-export data-duration=".1"><rect width="80" height="40" fill="red"/></svg><script>console.error("nonfatal telemetry")</script>''')
+        probe=self.renderer.probe(j)
+        self.assertTrue(any(d.code=='browser_errors' and d.severity=='warning' and 'nonfatal telemetry' in d.message for d in probe.diagnostics))
+        self.assertFalse(any(d.severity=='error' for d in probe.diagnostics))
+        out=self.root/'console-error-warning.mp4'
+        self.renderer.render(j,out)
+        self.assertTrue(out.is_file() and out.stat().st_size>0)
+
     def test_iframe_font_readiness_is_awaited(self):
         import html
         inner = '''<svg width="80" height="40" data-video-export data-duration=".2"><rect width="80" height="40" fill="red"/></svg>

@@ -1338,13 +1338,23 @@ class HtmlVideoRenderer:
             if blocked_local:
                 diagnostics.append(Diagnostic('error', 'local_assets_blocked',
                     'The embedded fallback cannot load required local assets. Use File URL or Loopback HTTP in an environment allowing local navigation, or provide a self-contained HTML bundle. Export stopped rather than silently omitting assets.'))
-            if loaded.console_errors or loaded.page_errors:
-                messages = (loaded.page_errors + loaded.console_errors)[-5:]
+            if loaded.page_errors:
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        "page_runtime_error",
+                        "The source raised uncaught JavaScript errors: "
+                        + " | ".join(loaded.page_errors[-5:])
+                        + ". Export stopped to avoid capturing a broken or error-overlay state.",
+                    )
+                )
+            if loaded.console_errors:
                 diagnostics.append(
                     Diagnostic(
                         "warning",
                         "browser_errors",
-                        "The source logged browser errors: " + " | ".join(messages),
+                        "The source logged browser console errors: "
+                        + " | ".join(loaded.console_errors[-5:]),
                     )
                 )
 
@@ -1594,7 +1604,16 @@ class HtmlVideoRenderer:
 
         raise ExportError(f"Unsupported timeline mode: {mode.value}")
 
+    def _raise_page_errors(self, loaded: LoadedSource) -> None:
+        if loaded.page_errors:
+            raise ExportError(
+                "Source JavaScript runtime error: "
+                + " | ".join(loaded.page_errors[-5:])
+                + ". Fix the source error before exporting."
+            )
+
     def _capture_frame(self, prepared: PreparedSource, job: JobConfig) -> bytes:
+        self._raise_page_errors(prepared.loaded)
         target = prepared.target
         page = prepared.loaded.page
 
@@ -1629,6 +1648,7 @@ class HtmlVideoRenderer:
                     omit_background=job.capture.transparent_background,
                     timeout=self.page_timeout_ms,
                 )
+                self._raise_page_errors(prepared.loaded)
                 last_actual = png_dimensions(data)
                 if last_actual == expected:
                     return data
@@ -1666,6 +1686,7 @@ class HtmlVideoRenderer:
                 timeout=self.page_timeout_ms,
             )
 
+        self._raise_page_errors(prepared.loaded)
         actual = png_dimensions(data)
         expected = (prepared.output_width, prepared.output_height)
         if actual != expected:

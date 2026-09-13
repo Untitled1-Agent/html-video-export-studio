@@ -14,7 +14,7 @@ Use Add HTML for one or multiple files, Add Folder for HTML inputs in a director
 
 Analyze a selected job before exporting. The inspector reports load strategy, target kind/selector/frame, timing mode, duration and its provenance, intrinsic and output dimensions, geometry policy, and errors/warnings. Deep analysis samples suitable seekable sources to suggest processing. It does not make an incompatible animation seekable.
 
-Errors block export. Warnings deserve inspection: low raster density means assets contain too few pixels for the requested size; very large frames warn of memory use; real-time timing warns about missed states; browser console warnings can reveal missing network assets. The app is not a complete asset-health checker for every loading pattern. A visually wrong preview must not be treated as a passing export merely because no exception occurred.
+Errors block export. Uncaught JavaScript page/runtime errors are treated as errors and stop export, including errors that occur during seek/capture, so a source-generated error overlay is not silently encoded. Plain browser `console.error` messages remain warnings because some pages log non-fatal telemetry there. Other warnings deserve inspection: low raster density means assets contain too few pixels for the requested size; very large frames warn of memory use; real-time timing warns about missed states; browser console warnings can reveal missing network assets. The app is not a complete asset-health checker for every loading pattern. A visually wrong preview must not be treated as a passing export merely because no exception occurred.
 
 ## Job settings
 

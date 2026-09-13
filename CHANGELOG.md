@@ -15,6 +15,7 @@
 - Add an opt-in H.265/HEVC Main 4:2:0 MP4 profile using libx265 CRF 10, hvc1 sample entries, fast-start MP4, explicit BT.709/sRGB metadata, and AAC-LC audio. Social delivery remains H.264 by default for broader playback/upload compatibility.
 - Add an optional per-job H.264/H.265/AV1 CRF override (1–51) in the desktop, CLI, Python/project model, and renderer while preserving each profile default when unset.
 - Add an opt-in AV1 Main 8-bit 4:2:0 MP4 profile using portable `libaom-av1`, CRF 18, `av01`, fast-start MP4, explicit BT.709/sRGB metadata, and AAC-LC audio.
+- Treat uncaught JavaScript page/runtime errors as export-blocking source validation failures, including errors raised during seek/capture; keep plain `console.error` output as a non-blocking warning.
 
 ### Added
 
